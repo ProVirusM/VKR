@@ -1,0 +1,49 @@
+security:
+    password_hashers:
+        App\Entity\User: # Укажите вашу сущность пользователя
+            algorithm: auto # Symfony автоматически выберет оптимальный алгоритм
+    providers:
+        users_in_database:
+            entity:
+                class: App\Entity\User
+                property: email
+
+
+    firewalls:
+        api_register:
+            pattern: ^/api/register
+            # Этот маршрут доступен без токена (для регистрации)
+            stateless: true
+            security: false
+        login:
+            pattern: ^/api/login
+            stateless: true
+            json_login:
+                #check_path: /api/login_check
+                check_path: /api/login_check
+                username_path: email   # Указываем, что ключ для имени пользователя - это "email"
+                password_path: password
+                success_handler: App\Security\CustomAuthenticationSuccessHandler
+                #success_handler: lexik_jwt_authentication.handler.authentication_success
+                failure_handler: lexik_jwt_authentication.handler.authentication_failure
+
+
+        api:
+            pattern:   ^/api
+            stateless: true
+            methods: ['OPTIONS', 'GET', 'POST', 'PUT', 'DELETE']
+            jwt: ~
+
+    access_control:
+        - { path: ^/api/login, roles: PUBLIC_ACCESS }
+#        - { path: ^/api,       roles: IS_AUTHENTICATED_FULLY }
+
+when@test:
+    security:
+        password_hashers:
+            # By default, password hashers are resource intensive and take time. This is
+            # important to generate secure password hashes. In tests however, secure hashes
+            # are not important, waste resources and increase test times. The following
+            # reduces the work factor to the lowest possible values.
+            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+                algorithm: plaintext

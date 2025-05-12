@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  nginx-service:
+    image: nginx:stable-alpine
+    container_name: nginx-container-fsp
+    ports:
+      - "8080:80"
+    volumes:
+      - ./app:/var/www/project
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php82-service
+      - postgres-db
+    networks:
+      - nginx-php82-pgsql
+
+  php82-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: php82-container-fsp
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./app:/var/www/project
+    networks:
+      - nginx-php82-pgsql
+
+  postgres-db:
+    image: postgres:15.3-alpine3.17
+    container_name: fsp-postgres
+    command:
+      - "postgres"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: user
+      POSTGRES_DB: fsp-postgres
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    volumes:
+      - ./postgres:/docker-entrypoint-initdb.d
+      - postgresdb-data:/var/lib/postgresql/data
+      - ./postgres:/dump
+    ports:
+      - "5433:5432"
+    networks:
+      nginx-php82-pgsql:
+
+volumes:
+  postgresdb-data:
+
+networks:
+  nginx-php82-pgsql:
+    driver: bridge
+    name: nginx-php82-pgsql
+    ipam:
+      driver: default
+      config:
+        - subnet: 174.34.0.0/25

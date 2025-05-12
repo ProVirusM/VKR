@@ -1,0 +1,173 @@
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Orders;
+use App\Repository\OrdersRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Annotation\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+
+#[Route('/api/orders')]
+class OrdersController extends AbstractController
+{
+    /**
+     * Получить список всех заказов (GET /api/orders)
+     */
+    #[Route('/', name: 'orders_index', methods: ['GET'])]
+//    public function index(OrdersRepository $ordersRepository): JsonResponse
+//    {
+//        $orders = $ordersRepository->findAll();
+//        $data = [];
+//
+//        foreach ($orders as $order) {
+//            $data[] = [
+//                'ord_id' => $order->getId(),
+//                'ord_title' => $order->getOrdTitle(),
+//                'ord_text' => $order->getOrdText(),
+//                'ord_status' => $order->getOrdStatus(),
+//                'ord_price' => $order->getOrdPrice(),
+//                'ord_time' => $order->getOrdTime(),
+//                'customer_id' => $order->getCstId()?->getId(),
+//            ];
+//        }
+//
+//        return $this->json($data);
+//    }
+    #[Route('/', name: 'orders_index', methods: ['GET'])]
+    public function index(Request $request, OrdersRepository $ordersRepository): JsonResponse
+    {
+        // Получаем параметры фильтра
+        $direction = $request->query->get('direction');
+        $language = $request->query->get('language');
+
+        // Получаем параметр stacks как строку
+        $stacks = $request->query->get('stacks', '');
+
+        // Если параметр stacks передан как строка, преобразуем его в массив
+        if (is_string($stacks) && !empty($stacks)) {
+            $stacks = explode(',', $stacks);  // Преобразуем строку в массив
+        }
+
+        // Получаем заказы с фильтрами
+        $orders = $ordersRepository->findByFilters($direction, $language, $stacks);
+
+        // Преобразуем заказы в формат JSON
+        $data = [];
+        foreach ($orders as $order) {
+            $data[] = [
+                'id' => $order->getId(),
+                'title' => $order->getOrdTitle(),
+                'text' => $order->getOrdText(),
+                'status' => $order->getOrdStatus(),
+                'price' => $order->getOrdPrice(),
+                'time' => $order->getOrdTime(),
+            ];
+        }
+
+        return $this->json($data);
+    }
+
+    /**
+     * Получить один заказ по ID (GET /api/orders/{ord_id})
+     */
+    #[Route('/{ord_id}', name: 'orders_show', methods: ['GET'])]
+    #[ParamConverter('order', options: ['mapping' => ['ord_id' => 'ord_id']])]
+    public function show(Orders $order): JsonResponse
+    {
+        return $this->json([
+            'ord_id' => $order->getId(),
+            'ord_title' => $order->getOrdTitle(),
+            'ord_text' => $order->getOrdText(),
+            'ord_status' => $order->getOrdStatus(),
+            'ord_price' => $order->getOrdPrice(),
+            'ord_time' => $order->getOrdTime(),
+            'customer_id' => $order->getCstId()?->getId(),
+        ]);
+    }
+
+    /**
+     * Создать новый заказ (POST /api/orders)
+     */
+    #[Route('/', name: 'orders_create', methods: ['POST'])]
+    public function create(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['ord_title'], $data['ord_text'], $data['ord_status'], $data['ord_price'], $data['ord_time'])) {
+            return $this->json(['error' => 'Missing required fields'], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        $order = new Orders();
+        $order->setOrdTitle($data['ord_title']);
+        $order->setOrdText($data['ord_text']);
+        $order->setOrdStatus($data['ord_status']);
+        $order->setOrdPrice($data['ord_price']);
+        $order->setOrdTime($data['ord_time']);
+
+        $entityManager->persist($order);
+        $entityManager->flush();
+
+        return $this->json([
+            'ord_id' => $order->getId(),
+            'ord_title' => $order->getOrdTitle(),
+            'ord_text' => $order->getOrdText(),
+            'ord_status' => $order->getOrdStatus(),
+            'ord_price' => $order->getOrdPrice(),
+            'ord_time' => $order->getOrdTime(),
+        ], JsonResponse::HTTP_CREATED);
+    }
+
+    /**
+     * Обновить заказ (PUT /api/orders/{ord_id})
+     */
+    #[Route('/{ord_id}', name: 'orders_update', methods: ['PUT'])]
+    #[ParamConverter('order', options: ['mapping' => ['ord_id' => 'ord_id']])]
+    public function update(Request $request, Orders $order, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        if (isset($data['ord_title'])) {
+            $order->setOrdTitle($data['ord_title']);
+        }
+        if (isset($data['ord_text'])) {
+            $order->setOrdText($data['ord_text']);
+        }
+        if (isset($data['ord_status'])) {
+            $order->setOrdStatus($data['ord_status']);
+        }
+        if (isset($data['ord_price'])) {
+            $order->setOrdPrice($data['ord_price']);
+        }
+        if (isset($data['ord_time'])) {
+            $order->setOrdTime($data['ord_time']);
+        }
+
+        $entityManager->flush();
+
+        return $this->json([
+            'ord_id' => $order->getId(),
+            'ord_title' => $order->getOrdTitle(),
+            'ord_text' => $order->getOrdText(),
+            'ord_status' => $order->getOrdStatus(),
+            'ord_price' => $order->getOrdPrice(),
+            'ord_time' => $order->getOrdTime(),
+        ]);
+    }
+
+    /**
+     * Удалить заказ (DELETE /api/orders/{ord_id})
+     */
+    #[Route('/{ord_id}', name: 'orders_delete', methods: ['DELETE'])]
+    #[ParamConverter('order', options: ['mapping' => ['ord_id' => 'ord_id']])]
+    public function delete(Orders $order, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $entityManager->remove($order);
+        $entityManager->flush();
+
+        return $this->json(['message' => 'Order deleted successfully']);
+    }
+}
