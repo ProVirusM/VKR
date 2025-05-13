@@ -36,15 +36,18 @@ class ProfileController extends AbstractController
     #[Route('/api/customer/active-orders', name: 'customer_active_orders', methods: ['GET'])]
     public function getActiveOrders(UserInterface $user): JsonResponse
     {
-        $orders = $user->getCustomers()?->getOrders()->filter(fn($order) => $order->getContractor() === null);
+        $orders = $user->getCustomers()?->getOrders()
+            ->filter(fn($order) => $order->getOrdStatus() == 'Новый');
 
         return $this->json($orders, 200, [], ['groups' => 'order:read']);
     }
 
+
     #[Route('/api/customer/completed-orders', name: 'customer_completed_orders', methods: ['GET'])]
     public function getCompletedOrders(UserInterface $user): JsonResponse
     {
-        $orders = $user->getCustomers()?->getOrders()->filter(fn($order) => $order->getContractor() !== null);
+        $orders = $user->getCustomers()?->getOrders()
+            ->filter(fn($order) => $order->getOrdStatus() == 'Завершен');
 
         return $this->json($orders, 200, [], ['groups' => 'order:read']);
     }

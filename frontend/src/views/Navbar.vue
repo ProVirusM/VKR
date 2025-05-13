@@ -18,13 +18,13 @@ const goToLogin = () => {
 <template>
   <header class="navbar">
     <div class="navbar-logo">
-      <img alt="Vue logo" src="@/assets/logo.svg" width="60" height="60" />
-      <span class="brand-name">MyApp</span>
+      <img alt="Vue logo" src="@/assets/logo4.svg" width="60" height="60" />
+      <span class="brand-name">IT-заказы</span>
     </div>
     <nav class="navbar-links">
       <RouterLink to="/" exact>Home</RouterLink>
       <RouterLink to="/about">About</RouterLink>
-      <RouterLink to="/customer/orders">Orders</RouterLink>
+      <RouterLink to="/customer/orders">Заказы</RouterLink>
 
       <template v-if="!auth.isAuthenticated">
         <v-btn color="primary" class="navbar-btn" @click="goToLogin">Войти</v-btn>

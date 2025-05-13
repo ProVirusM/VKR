@@ -6,6 +6,7 @@ use App\Repository\OrdersRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: OrdersRepository::class)]
 class Orders
@@ -13,26 +14,32 @@ class Orders
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['order:read'])]
     private ?int $id = null;
 
 //    #[ORM\Column]
 //    private ?int $ord_id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['order:read'])]
     private ?string $ord_title = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['order:read'])]
     private ?string $ord_text = null;
 
 
 
     #[ORM\Column(length: 255)]
+    #[Groups(['order:read'])]
     private ?string $ord_status = null;
 
     #[ORM\Column]
+    #[Groups(['order:read'])]
     private ?int $ord_price = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['order:read'])]
     private ?string $ord_time = null;
 
     /**

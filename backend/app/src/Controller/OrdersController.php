@@ -10,13 +10,20 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
-
+use App\Repository\CustomersRepository;
 #[Route('/api/orders')]
 class OrdersController extends AbstractController
 {
     /**
      * Получить список всех заказов (GET /api/orders)
      */
+    private $customerRepository;  // Делаем переменную доступной в контроллере
+
+    // Внедряем репозиторий через конструктор
+    public function __construct(CustomersRepository $customerRepository)
+    {
+        $this->customerRepository = $customerRepository;
+    }
     #[Route('/', name: 'orders_index', methods: ['GET'])]
 //    public function index(OrdersRepository $ordersRepository): JsonResponse
 //    {
@@ -97,12 +104,13 @@ class OrdersController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-        if (!isset($data['ord_title'], $data['ord_text'], $data['ord_status'], $data['ord_price'], $data['ord_time'])) {
+        if (!isset($data['ord_title'], $data['ord_text'], $data['ord_status'], $data['ord_price'], $data['ord_time'], $data['cst_id'])) {
             return $this->json(['error' => 'Missing required fields'], JsonResponse::HTTP_BAD_REQUEST);
         }
-
+        $customer = $this->customerRepository->find($data['cst_id']);
         $order = new Orders();
         $order->setOrdTitle($data['ord_title']);
+        $order->setCstId($customer);
         $order->setOrdText($data['ord_text']);
         $order->setOrdStatus($data['ord_status']);
         $order->setOrdPrice($data['ord_price']);
