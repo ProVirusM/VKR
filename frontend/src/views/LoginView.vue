@@ -29,10 +29,12 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth' // <-- импортируем store
 
 const email = ref('')
 const password = ref('')
 const router = useRouter()
+const auth = useAuthStore() // <-- инициализируем store
 
 const login = async () => {
   try {
@@ -41,12 +43,17 @@ const login = async () => {
       password: password.value,
     })
 
+    // сохраняем данные
+    const token = response.data.token
     localStorage.setItem('token', response.data.token)
     localStorage.setItem('name', response.data.name)
     localStorage.setItem('email', response.data.email)
-    router.push('/dashboard')
+
+    auth.login(token) // <-- передаем токен в store
+    router.push('/dashboard') // перенаправляем
   } catch (err) {
     alert('Ошибка входа. Проверьте данные.')
   }
 }
 </script>
+

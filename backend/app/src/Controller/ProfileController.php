@@ -21,8 +21,53 @@ class ProfileController extends AbstractController
         // Выводим информацию о пользователе
         return $this->json([
             'name' => $user->getUsrName(), // Пример поля для имени
+            'surname' => $user->getUsrSurname(),
+            'patronymic' => $user->getUsrPatronymic(),
+//            'contractors' => $user->getContractors(),
+//            'customers' => $user->getCustomers(),
+            'contractorId' => $user->getContractors()?->getId(),
+            'customerId' => $user->getCustomers()?->getId(),
             'email' => $user->getEmail(),
             'id' => $user->getId(),
+            'roles' => $user->getRoles(),
         ]);
+    }
+
+    #[Route('/api/customer/active-orders', name: 'customer_active_orders', methods: ['GET'])]
+    public function getActiveOrders(UserInterface $user): JsonResponse
+    {
+        $orders = $user->getCustomers()?->getOrders()->filter(fn($order) => $order->getContractor() === null);
+
+        return $this->json($orders, 200, [], ['groups' => 'order:read']);
+    }
+
+    #[Route('/api/customer/completed-orders', name: 'customer_completed_orders', methods: ['GET'])]
+    public function getCompletedOrders(UserInterface $user): JsonResponse
+    {
+        $orders = $user->getCustomers()?->getOrders()->filter(fn($order) => $order->getContractor() !== null);
+
+        return $this->json($orders, 200, [], ['groups' => 'order:read']);
+    }
+
+
+    #[Route('/api/contractor/approved-orders', name: 'contractor_approved_orders', methods: ['GET'])]
+    public function getApprovedOrders(UserInterface $user): JsonResponse
+    {
+        $orders = $user->getContractors()?->getApprovedOrders(); // аналогично
+        return $this->json($orders);
+    }
+
+    #[Route('/api/contractor/responded-orders', name: 'contractor_responded_orders', methods: ['GET'])]
+    public function getRespondedOrders(UserInterface $user): JsonResponse
+    {
+        $orders = $user->getContractors()?->getRespondedOrders();
+        return $this->json($orders);
+    }
+
+    #[Route('/api/contractor/reviews', name: 'contractor_reviews', methods: ['GET'])]
+    public function getContractorReviews(UserInterface $user): JsonResponse
+    {
+        $reviews = $user->getContractors()?->getReviews();
+        return $this->json($reviews);
     }
 }
