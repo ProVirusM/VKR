@@ -20,20 +20,26 @@ class LanguagesController extends AbstractController
     #[Route('/{directionId}', name: 'get_languages2', methods: ['GET'])]
     public function getLanguages(int $directionId, StacksRepository $stacksRepository): JsonResponse
     {
-        // Найдем все языки для указанного направления
         $stacks = $stacksRepository->findBy(['drc_id' => $directionId]);
-        $languages = [];
+
+        $uniqueLanguages = [];
 
         foreach ($stacks as $stack) {
             $language = $stack->getLngId();
-            $languages[] = [
-                'id' => $language->getId(),
-                'title' => $language->getLngTitle(),
-            ];
+            $languageId = $language->getId();
+
+            if (!isset($uniqueLanguages[$languageId])) {
+                $uniqueLanguages[$languageId] = [
+                    'id' => $languageId,
+                    'title' => $language->getLngTitle(),
+                ];
+            }
         }
 
-        return new JsonResponse($languages);
+        // Возвращаем только уникальные значения
+        return new JsonResponse(array_values($uniqueLanguages));
     }
+
     #[Route('/', name: 'languages_index', methods: ['GET'])]
     public function index(LanguagesRepository $languagesRepository): JsonResponse
     {

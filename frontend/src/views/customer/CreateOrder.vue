@@ -22,14 +22,46 @@
             dense
           />
 
+          <!-- Направление -->
           <v-select
-            v-model="form.status"
-            label="Статус"
-            :items="['Новый', 'В процессе', 'Завершен']"
-            :rules="[rules.required]"
-            prepend-icon="mdi-flag"
+            v-model="selectedDirection"
+            :items="directions"
+            item-text="title"
+            item-value="id"
+            label="Направление"
+            prepend-icon="mdi-map"
             outlined
             dense
+            :rules="[rules.required]"
+          />
+
+          <!-- Язык -->
+          <v-select
+            v-model="selectedLanguage"
+            :items="languages"
+            item-text="title"
+            item-value="id"
+            label="Язык"
+            prepend-icon="mdi-translate"
+            outlined
+            dense
+            :disabled="!selectedDirection"
+            :rules="[rules.required]"
+          />
+
+          <!-- Технологии -->
+          <v-select
+            v-model="form.stacks"
+            :items="stacks"
+            item-text="title"
+            item-value="id"
+            label="Технология"
+            prepend-icon="mdi-layers"
+            outlined
+            dense
+            :disabled="!selectedLanguage"
+            :rules="[rules.required]"
+
           />
 
           <v-text-field
@@ -67,88 +99,137 @@
     </v-card>
   </v-container>
 </template>
-
 <script setup>
-import {ref} from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
-import {useToast} from 'vue-toastification'
+import { useToast } from 'vue-toastification'
 
 const toast = useToast()
 
-// Состояния формы
 const form = ref({
   title: '',
   text: '',
-  status: '',
   price: null,
   time: '',
+  stacks: []
 })
 
-// Состояние валидации и загрузки
 const isValid = ref(false)
 const loading = ref(false)
+const user = ref(null)
 
 const rules = {
-  required: value => !!value || 'Обязательное поле',
+  required: v => !!v || 'Обязательное поле',
   positive: v => v > 0 || 'Должно быть положительное число',
 }
 
-// Переменная для данных пользователя
-const user = ref(null)
+// Выборы и списки
+const selectedDirection = ref(null)
+const selectedLanguage = ref(null)
+const directions = ref([])
+const languages = ref([])
+const stacks = ref([])
 
-// Функция для получения данных о текущем пользователе
+// Получение текущего пользователя
 const fetchUser = async () => {
   const token = localStorage.getItem('token')
-  console.log(token)
   try {
-    const response = await axios.get('/api/profile', {
-      headers: {Authorization: `Bearer ${token}`}
-    }) // Замените на свой эндпоинт, чтобы получить данные о текущем пользователе
-    user.value = response.data
-  } catch (error) {
-    console.error('Не удалось получить данные о пользователе:', error)
+    const res = await axios.get('/api/profile', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    user.value = res.data
+  } catch (err) {
+    console.error('Ошибка получения пользователя:', err)
   }
 }
 
-// Загружаем данные о пользователе при монтировании компонента
-fetchUser()
+// Направления
+const fetchDirections = async () => {
+  try {
+    const res = await axios.get('/api/directions')
+    directions.value = res.data
+  } catch (err) {
+    console.error('Ошибка загрузки направлений:', err)
+  }
+}
 
-// Функция отправки данных заказа
+// Языки
+const fetchLanguages = async () => {
+  if (!selectedDirection.value) return
+  try {
+    const res = await axios.get(`/api/languages/${selectedDirection.value}`)
+    languages.value = res.data
+  } catch (err) {
+    console.error('Ошибка загрузки языков:', err)
+  }
+}
+
+// Стек
+const fetchStacks = async () => {
+  if (!selectedDirection.value || !selectedLanguage.value) return
+  try {
+    const res = await axios.get(`/api/stacks/${selectedLanguage.value}/${selectedDirection.value}`)
+    stacks.value = res.data
+  } catch (err) {
+    console.error('Ошибка загрузки стеков:', err)
+  }
+}
+
+// Watchers
+watch(selectedDirection, () => {
+  selectedLanguage.value = null
+  stacks.value = []
+  fetchLanguages()
+})
+
+watch(selectedLanguage, () => {
+  form.value.stacks = []
+  fetchStacks()
+})
+
+// Submit
 const submit = async () => {
   if (!isValid.value || !user.value) return
-
   loading.value = true
+  console.log(form.value.stacks)
+  if (typeof form.value.stacks === 'number') {
+    form.value.stacks = [form.value.stacks]; // Преобразуем число в массив
+  }
+  console.log(form.value.stacks)
   try {
-    const response = await axios.post('/api/orders/', {
+    await axios.post('/api/orders/', {
       ord_title: form.value.title,
       ord_text: form.value.text,
-      ord_status: form.value.status,
+      ord_status: 'Новый', // статус не выбирается
       ord_price: form.value.price,
       ord_time: form.value.time,
-      cst_id: user.value.customerId // Передаем customerId текущего пользователя
+      cst_id: user.value.customerId,
+      ord_stacks: form.value.stacks // массив ID стеков
     })
-
+    console.log(form.value.stacks)
     toast.success('Заказ успешно создан!')
+
     form.value = {
       title: '',
       text: '',
-      status: '',
       price: null,
       time: '',
+      stacks: []
     }
-  } catch (error) {
+
+    selectedDirection.value = null
+    selectedLanguage.value = null
+    stacks.value = []
+  } catch (err) {
     toast.error('Ошибка при создании заказа')
-    console.error(error)
+    console.error(err)
   } finally {
     loading.value = false
   }
 }
-</script>
 
-<style scoped>
-.v-text-field,
-.v-textarea,
-.v-select {
-  margin-bottom: 16px;
-}
-</style>
+onMounted(() => {
+  fetchUser()
+  fetchDirections()
+})
+</script>

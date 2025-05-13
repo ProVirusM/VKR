@@ -51,7 +51,7 @@ class Orders
     /**
      * @var Collection<int, OrdersStacks>
      */
-    #[ORM\OneToMany(targetEntity: OrdersStacks::class, mappedBy: 'ord_id', orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: OrdersStacks::class, mappedBy: 'ord_id', cascade: ['persist'], orphanRemoval: true)]
     private Collection $ordersStacks;
 
     /**

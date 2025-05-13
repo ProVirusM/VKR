@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Orders;
+use App\Entity\OrdersStacks;
 use App\Repository\OrdersRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -11,6 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use App\Repository\CustomersRepository;
+use App\Repository\StacksRepository;
 #[Route('/api/orders')]
 class OrdersController extends AbstractController
 {
@@ -18,11 +20,12 @@ class OrdersController extends AbstractController
      * Получить список всех заказов (GET /api/orders)
      */
     private $customerRepository;  // Делаем переменную доступной в контроллере
-
+    private $stackRepository;
     // Внедряем репозиторий через конструктор
-    public function __construct(CustomersRepository $customerRepository)
+    public function __construct(CustomersRepository $customerRepository, StacksRepository $stackRepository)
     {
         $this->customerRepository = $customerRepository;
+        $this->stackRepository = $stackRepository;
     }
     #[Route('/', name: 'orders_index', methods: ['GET'])]
 //    public function index(OrdersRepository $ordersRepository): JsonResponse
@@ -104,10 +107,11 @@ class OrdersController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-        if (!isset($data['ord_title'], $data['ord_text'], $data['ord_status'], $data['ord_price'], $data['ord_time'], $data['cst_id'])) {
+        if (!isset($data['ord_title'], $data['ord_text'], $data['ord_status'], $data['ord_price'], $data['ord_time'], $data['cst_id'],$data['ord_stacks'])) {
             return $this->json(['error' => 'Missing required fields'], JsonResponse::HTTP_BAD_REQUEST);
         }
         $customer = $this->customerRepository->find($data['cst_id']);
+
         $order = new Orders();
         $order->setOrdTitle($data['ord_title']);
         $order->setCstId($customer);
@@ -116,6 +120,16 @@ class OrdersController extends AbstractController
         $order->setOrdPrice($data['ord_price']);
         $order->setOrdTime($data['ord_time']);
 
+        foreach ($data['ord_stacks'] as $stackId) {
+            $stack = $this->stackRepository->find($stackId);
+            if ($stack) {
+                // Создаем OrdersStacks объект и связываем его с заказом и стеком
+                $ordersStack = new OrdersStacks();
+                $ordersStack->setStcId($stack);  // Связываем стек с объектом OrdersStacks
+                $ordersStack->setOrdId($order);  // Связываем заказ с объектом OrdersStacks
+                $order->addOrdersStack($ordersStack);  // Добавляем в заказ
+            }
+        }
         $entityManager->persist($order);
         $entityManager->flush();
 
