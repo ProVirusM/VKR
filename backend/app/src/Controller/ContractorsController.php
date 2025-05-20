@@ -112,6 +112,81 @@ class ContractorsController extends AbstractController
     }
 
     /**
+     * Получить полную информацию о подрядчике (GET /api/contractors/{cnt_id}/full-profile)
+     */
+    #[Route('/{cnt_id}/full-profile', name: 'contractors_full_profile', methods: ['GET'])]
+    //#[ParamConverter('contractor', options: ['mapping' => ['cnt_id' => 'id']])]
+    public function fullProfile(int $cnt_id, ContractorsRepository $contractorsRepository): JsonResponse
+    {
+        $contractor = $contractorsRepository->find($cnt_id);
+        if (!$contractor) {
+            return $this->json(['error' => 'Contractor not found'], 404);
+        }
+        $user = $contractor->getUsrId();
+
+        // Проекты
+        $projects = [];
+        foreach ($contractor->getProjectsGitHubs() as $project) {
+            $photos = [];
+            foreach ($project->getPhotosProjectsGitHubs() as $photo) {
+                $photos[] = [
+                    'id' => $photo->getId(),
+                    'link' => $photo->getPpghLink(),
+                ];
+            }
+            $projects[] = [
+                'id' => $project->getId(),
+                'name' => $project->getPghName(),
+                'repository' => $project->getPghRepository(),
+                'text' => $project->getPghText(),
+                'photos' => $photos,
+            ];
+        }
+
+        // Заказы
+        $orders = [];
+        foreach ($contractor->getOrdersContractors() as $orderContractor) {
+            $order = $orderContractor->getOrdId();
+            if ($order) {
+                $orders[] = [
+                    'id' => $order->getId(),
+                    'title' => $order->getOrdTitle(),
+                    'status' => $order->getOrdStatus(),
+                    'price' => $order->getOrdPrice(),
+                    'time' => $order->getOrdTime(),
+                    'order_contractor_status' => $orderContractor->getOrdCntStatus(),
+                ];
+            }
+        }
+
+        // Отзывы
+        $feedbacks = [];
+        foreach ($contractor->getFeedbacks() as $feedback) {
+            $feedbacks[] = [
+                'id' => $feedback->getId(),
+                'text' => $feedback->getFdbText(),
+                'estimation' => $feedback->getFdbEstimation(),
+                'timestamp' => $feedback->getFdbTimestamp() ? $feedback->getFdbTimestamp()->format('Y-m-d H:i:s') : null,
+            ];
+        }
+
+        return $this->json([
+            'id' => $contractor->getId(),
+            'user' => [
+                'id' => $user?->getId(),
+                'name' => $user?->getUsrName(),
+                'surname' => $user?->getUsrSurname(),
+                'patronymic' => $user?->getUsrPatronymic(),
+                'email' => $user?->getEmail(),
+            ],
+            'description' => $contractor->getCntText(),
+            'projects' => $projects,
+            'orders' => $orders,
+            'feedbacks' => $feedbacks,
+        ]);
+    }
+
+    /**
      * Сериализация подрядчика в массив
      */
     private function serializeContractor(Contractors $contractor): array

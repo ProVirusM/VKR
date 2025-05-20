@@ -90,7 +90,7 @@ onMounted(async () => {
     const res = await axios.get('/api/customer/active-orders', {
       headers: { Authorization: `Bearer ${token}` }
     })
-    orders.value = res.data
+    orders.value = Object.values(res.data)
   } catch (error) {
     console.error('Ошибка при загрузке заказов', error)
   }

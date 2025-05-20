@@ -39,6 +39,7 @@ class ProfileController extends AbstractController
         $orders = $user->getCustomers()?->getOrders()
             ->filter(fn($order) => $order->getOrdStatus() == 'Новый');
 
+
         return $this->json($orders, 200, [], ['groups' => 'order:read']);
     }
 

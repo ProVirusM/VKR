@@ -192,4 +192,61 @@ class OrdersController extends AbstractController
 
         return $this->json(['message' => 'Order deleted successfully']);
     }
+
+    #[Route('/{id}/full', name: 'order_full', methods: ['GET'])]
+    public function getOrderWithStacks(int $id, OrdersRepository $ordersRepo): JsonResponse
+    {
+        $order = $ordersRepo->find($id);
+        if (!$order) {
+            return $this->json(['error' => 'Order not found'], 404);
+        }
+
+        $stacks = [];
+        foreach ($order->getOrdersStacks() as $orderStack) {
+            $stack = $orderStack->getStcId();
+            $stacks[] = [
+                'id' => $stack->getId(),
+                'title' => $stack->getStcTitle(),
+            ];
+        }
+
+        return $this->json([
+            'order' => [
+                'id' => $order->getId(),
+                'ord_title' => $order->getOrdTitle(),
+                'ord_text' => $order->getOrdText(),
+                'ord_price' => $order->getOrdPrice(),
+                'ord_time' => $order->getOrdTime(),
+                'ord_status' => $order->getOrdStatus(),
+            ],
+            'stacks' => $stacks
+        ]);
+    }
+    #[Route('/{id}/contractors', name: 'api_order_contractors', methods: ['GET'])]
+    public function getContractors(int $id, OrdersRepository $ordersRepository): JsonResponse
+    {
+        $order = $ordersRepository->find($id);
+
+        if (!$order) {
+            return $this->json(['error' => 'Order not found'], 404);
+        }
+
+        $result = [];
+        foreach ($order->getOrdersContractors() as $orderContractor) {
+            $contractor = $orderContractor->getCntId();
+            $user = $contractor->getUsrId();
+
+            $result[] = [
+                'contractorId' => $contractor->getId(),
+                'userName' => $user ? $user->getUsrName() : null,
+                'userSurname' => $user ? $user->getUsrSurname() : null,
+                'userPatronymic' => $user ? $user->getUsrPatronymic() : null,
+                // сюда можно добавить другие нужные поля исполнителя
+            ];
+        }
+
+        return $this->json($result);
+    }
+
+
 }

@@ -58,6 +58,21 @@ const router = createRouter({
     { path: '/contractor/reviews', component: ContractorReviews },
     { path: '/contractor/approved-orders', component: ApprovedOrders },
     { path: '/contractor/responded-orders', component: RespondedOrders },
+    {
+      path: '/order/:id',
+      name: 'OrderDetails',
+      component: () => import('@/views/OrderDetails.vue')
+    },
+    {
+      path: '/customer/orders/:id/responders',
+      name: 'OrderContractors',
+      component: () => import('@/views/OrderContractors.vue')
+    },
+    {
+      path: '/contractor/:id',
+      name: 'ContractorProfile',
+      component: () => import('@/views/ContractorProfile.vue')
+    },
   ],
 })
 
