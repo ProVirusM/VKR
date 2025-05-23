@@ -60,13 +60,13 @@ class OrdersController extends AbstractController
 
         // Если параметр stacks передан как строка, преобразуем его в массив
         if (is_string($stacks) && !empty($stacks)) {
-            $stacks = explode(',', $stacks);  // Преобразуем строку в массив
+            $stacks = array_map('intval', explode(',', $stacks));  // Преобразуем строку в массив целых чисел
         }
 
         // Получаем заказы с фильтрами
         $ordersArray = $ordersRepository->findByFilters($direction, $language, $stacks);
 
-// Преобразуем в коллекцию и фильтруем
+        // Преобразуем в коллекцию и фильтруем
         $orders = (new ArrayCollection($ordersArray))
             ->filter(fn($order) => $order->getOrdStatus() == 'Новый');
 

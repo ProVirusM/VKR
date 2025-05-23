@@ -39,10 +39,13 @@
                 :items="stacks"
                 item-text="title"
                 item-value="id"
-                label="Выберите технологию"
+                label="Выберите технологии"
                 :disabled="!selectedLanguage"
                 outlined
                 dense
+                multiple
+                chips
+                closable-chips
               ></v-select>
             </v-col>
           </v-row>
@@ -205,7 +208,9 @@ const filterOrders = async () => {
   const params = {}
   if (selectedDirection.value) params.direction = selectedDirection.value
   if (selectedLanguage.value) params.language = selectedLanguage.value
-  if (selectedStacks.value) params.stacks = selectedStacks.value
+  if (selectedStacks.value && selectedStacks.value.length > 0) {
+    params.stacks = selectedStacks.value.join(',')
+  }
 
   try {
     const res = await axios.get('/api/orders', { params })

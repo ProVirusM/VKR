@@ -47,18 +47,30 @@ class OrdersRepository extends ServiceEntityRepository
             ->innerJoin('os.stc_id', 's');
 
         if ($language) {
-            $qb->andWhere('s.lng_id = :language')
-                ->setParameter('language', $language);
+            $languageIds = explode(',', $language);
+            $qb->andWhere('s.lng_id IN (:languages)')
+                ->setParameter('languages', $languageIds);
         }
 
         if ($direction) {
-            $qb->andWhere('s.drc_id = :direction')
-                ->setParameter('direction', $direction);
+            $directionIds = explode(',', $direction);
+            $qb->andWhere('s.drc_id IN (:directions)')
+                ->setParameter('directions', $directionIds);
         }
 
         if (!empty($stacks)) {
-            $qb->andWhere('s.id IN (:stacks)')
-                ->setParameter('stacks', $stacks);
+            // Создаем подзапрос для поиска заказов, которые содержат ВСЕ выбранные технологии
+            $subQuery = $this->createQueryBuilder('sub_o')
+                ->select('sub_o.id')
+                ->innerJoin('sub_o.ordersStacks', 'sub_os')
+                ->innerJoin('sub_os.stc_id', 'sub_s')
+                ->where('sub_s.id IN (:stacks)')
+                ->groupBy('sub_o.id')
+                ->having('COUNT(DISTINCT sub_s.id) = :stackCount');
+
+            $qb->andWhere('o.id IN (' . $subQuery->getDQL() . ')')
+                ->setParameter('stacks', $stacks)
+                ->setParameter('stackCount', count($stacks));
         }
 
         $qb->groupBy('o.id'); // Убираем дубли, если заказ связан с несколькими подходящими стеками

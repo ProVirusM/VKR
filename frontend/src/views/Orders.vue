@@ -12,9 +12,12 @@
                 :items="directions"
                 item-text="title"
                 item-value="id"
-                label="Выберите направление"
+                label="Выберите направления"
                 outlined
                 dense
+                multiple
+                chips
+                closable-chips
               ></v-select>
             </v-col>
 
@@ -25,10 +28,13 @@
                 :items="languages"
                 item-text="title"
                 item-value="id"
-                label="Выберите язык"
-                :disabled="!selectedDirection"
+                label="Выберите языки"
+                :disabled="!selectedDirection.length"
                 outlined
                 dense
+                multiple
+                chips
+                closable-chips
               ></v-select>
             </v-col>
 
@@ -39,10 +45,13 @@
                 :items="stacks"
                 item-text="title"
                 item-value="id"
-                label="Выберите технологию"
-                :disabled="!selectedLanguage"
+                label="Выберите технологии"
+                :disabled="!selectedLanguage.length"
                 outlined
                 dense
+                multiple
+                chips
+                closable-chips
               ></v-select>
             </v-col>
           </v-row>
@@ -130,9 +139,9 @@ const directions = ref([]) // Направления
 const languages = ref([])  // Языки
 const stacks = ref([])     // Технологии
 
-const selectedDirection = ref(null)
-const selectedLanguage = ref(null)
-const selectedStacks = ref(null)
+const selectedDirection = ref([])
+const selectedLanguage = ref([])
+const selectedStacks = ref([])
 
 const filteredOrders = ref([])
 
@@ -154,22 +163,33 @@ const getDirections = async () => {
 
 // Следим за выбором направления → загружаем языки
 watch(selectedDirection, async (newVal) => {
-  if (!newVal) return
+  if (!newVal.length) {
+    languages.value = []
+    stacks.value = []
+    selectedLanguage.value = []
+    selectedStacks.value = []
+    return
+  }
   await fetchLanguages()
-  selectedLanguage.value = null
-  selectedStacks.value = null
+  selectedLanguage.value = []
+  selectedStacks.value = []
   stacks.value = []
   filterOrders()
 })
 
-// Загружаем языки для выбранного направления
+// Загружаем языки для выбранных направлений
 const fetchLanguages = async () => {
   try {
-    const res = await axios.get(`/api/languages/${selectedDirection.value}`)
-    // Убираем дубли
-    const uniqueLanguages = Array.from(new Set(res.data.map(lang => lang.title)))
-      .map(title => res.data.find(lang => lang.title === title))
-
+    const languagesPromises = selectedDirection.value.map(directionId =>
+      axios.get(`/api/languages/${directionId}`)
+    )
+    const responses = await Promise.all(languagesPromises)
+    
+    // Объединяем и убираем дубли
+    const allLanguages = responses.flatMap(res => res.data)
+    const uniqueLanguages = Array.from(new Set(allLanguages.map(lang => lang.id)))
+      .map(id => allLanguages.find(lang => lang.id === id))
+    
     languages.value = uniqueLanguages
   } catch (error) {
     console.error('Ошибка при загрузке языков:', error)
@@ -178,18 +198,33 @@ const fetchLanguages = async () => {
 
 // Следим за выбором языка → загружаем технологии
 watch(selectedLanguage, async (newVal) => {
-  if (!newVal) return
+  if (!newVal.length) {
+    stacks.value = []
+    selectedStacks.value = []
+    return
+  }
   await fetchStacks()
-  selectedStacks.value = null
+  selectedStacks.value = []
   filterOrders()
 })
 
-// Загружаем технологии для выбранного языка и направления
+// Загружаем технологии для выбранных языков и направлений
 const fetchStacks = async () => {
-  if (!selectedLanguage.value || !selectedDirection.value) return
+  if (!selectedLanguage.value.length || !selectedDirection.value.length) return
   try {
-    const res = await axios.get(`/api/stacks/${selectedLanguage.value}/${selectedDirection.value}`)
-    stacks.value = res.data
+    const stacksPromises = selectedLanguage.value.flatMap(languageId =>
+      selectedDirection.value.map(directionId =>
+        axios.get(`/api/stacks/${languageId}/${directionId}`)
+      )
+    )
+    const responses = await Promise.all(stacksPromises)
+    
+    // Объединяем и убираем дубли
+    const allStacks = responses.flatMap(res => res.data)
+    const uniqueStacks = Array.from(new Set(allStacks.map(stack => stack.id)))
+      .map(id => allStacks.find(stack => stack.id === id))
+    
+    stacks.value = uniqueStacks
   } catch (error) {
     console.error('Ошибка при загрузке технологий:', error)
   }
@@ -203,9 +238,9 @@ watch(selectedStacks, () => {
 // Фильтрация заказов через бэкенд
 const filterOrders = async () => {
   const params = {}
-  if (selectedDirection.value) params.direction = selectedDirection.value
-  if (selectedLanguage.value) params.language = selectedLanguage.value
-  if (selectedStacks.value) params.stacks = selectedStacks.value
+  if (selectedDirection.value.length) params.direction = selectedDirection.value.join(',')
+  if (selectedLanguage.value.length) params.language = selectedLanguage.value.join(',')
+  if (selectedStacks.value.length) params.stacks = selectedStacks.value.join(',')
 
   try {
     const res = await axios.get('/api/orders', { params })
