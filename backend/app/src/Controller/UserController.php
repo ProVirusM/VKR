@@ -20,6 +20,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class UserController extends AbstractController
 {
@@ -90,14 +91,23 @@ class UserController extends AbstractController
 
         return new JsonResponse(["message" => "User deleted successfully"], Response::HTTP_NO_CONTENT);
     }
-    #[Route('/api/users', name: 'api_create', methods: ['POST'])]
-    public function register(Request $request): JsonResponse
-    {
+    #[Route('/api/register', name: 'api_create', methods: ['POST'])]
+    public function register(
+        Request $request,
+        EntityManagerInterface $entityManager,
+        UserPasswordHasherInterface $passwordHasher
+    ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
         // Валидируем поля
-        if (!isset($data['usr_name'], $data['usr_surname'], $data['usr_patronymic'], $data['email'], $data['password'])) {
-            return new JsonResponse(['error' => 'Missing required fields'], 400);
+        if (!isset($data['usr_name'], $data['usr_surname'], $data['usr_patronymic'], $data['email'], $data['password'], $data['role'])) {
+            return new JsonResponse(['error' => 'Missing required fields'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Проверяем, существует ли пользователь с таким email
+        $existingUser = $entityManager->getRepository(User::class)->findOneBy(['email' => $data['email']]);
+        if ($existingUser) {
+            return new JsonResponse(['error' => 'User with this email already exists'], Response::HTTP_CONFLICT);
         }
 
         // Создаем нового пользователя
@@ -107,13 +117,17 @@ class UserController extends AbstractController
         $user->setUsrPatronymic($data['usr_patronymic']);
         $user->setEmail($data['email']);
 
-        // Хэшируем пароль перед сохранением
-        $hashedPassword = $this->passwordEncoder->encodePassword($user, $data['password']);
+        // Устанавливаем роль из запроса
+        $user->setRoles([$data['role']]);
+
+        // Хэшируем пароль
+        $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
         $user->setPassword($hashedPassword);
 
         // Сохраняем пользователя в базе данных
-        $this->userRepository->save($user);
+        $entityManager->persist($user);
+        $entityManager->flush();
 
-        return new JsonResponse(['message' => 'User registered successfully'], 201);
+        return new JsonResponse(['message' => 'User registered successfully'], Response::HTTP_CREATED);
     }
 }
