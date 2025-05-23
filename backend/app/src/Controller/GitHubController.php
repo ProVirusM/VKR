@@ -10,9 +10,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class GitHubController extends AbstractController
 {
-
     private HttpClientInterface $httpClient;
     private string $githubToken;
+
     public function __construct(HttpClientInterface $httpClient, string $githubToken)
     {
         $this->httpClient = $httpClient;
@@ -24,10 +24,9 @@ class GitHubController extends AbstractController
     {
         try {
             $headers = [
-                'Authorization' => 'Bearer ' . $this->githubToken, // ✅ Правильный формат
+                'Authorization' => 'Bearer ' . $this->githubToken,
                 'Accept' => 'application/vnd.github.v3+json'
             ];
-
 
             // Запрашиваем основную информацию о репозитории
             $response = $this->httpClient->request('GET', "https://api.github.com/repos/$owner/$repo", [
@@ -78,7 +77,7 @@ class GitHubController extends AbstractController
             $languagePercentages = [];
             foreach ($languages as $language => $lines) {
                 $percentage = ($lines / $totalLines) * 100;
-                $languagePercentages[$language] = round($percentage, 2); // округляем до 2 знаков после запятой
+                $languagePercentages[$language] = round($percentage, 2);
             }
 
             // Запрашиваем последние сборки GitHub Actions
@@ -112,7 +111,7 @@ class GitHubController extends AbstractController
                 ],
                 'languages' => $languagePercentages,
                 'ci_cd' => !empty($actions['workflow_runs']) ? 'Enabled' : 'Not Found',
-                'technologies' => $technologies,  // Добавляем информацию о технологиях
+                'technologies' => $technologies,
             ];
 
             return new JsonResponse($result, Response::HTTP_OK);
@@ -125,7 +124,7 @@ class GitHubController extends AbstractController
     private function searchFilesInRepo(string $owner, string $repo, string $path): array
     {
         $headers = [
-            'Authorization' => 'Bearer ' . $this->githubToken, // ✅ Правильный формат
+            'Authorization' => 'Bearer ' . $this->githubToken,
             'Accept' => 'application/vnd.github.v3+json'
         ];
         $files = [];
@@ -159,7 +158,7 @@ class GitHubController extends AbstractController
     private function extractTechnologiesFromFiles(array $files, string $owner, string $repo): array
     {
         $headers = [
-            'Authorization' => 'Bearer ' . $this->githubToken, // ✅ Правильный формат
+            'Authorization' => 'Bearer ' . $this->githubToken,
             'Accept' => 'application/vnd.github.v3+json'
         ];
         $technologies = [
