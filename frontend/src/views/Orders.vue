@@ -57,19 +57,19 @@
           rounded="xl"
         >
           <v-card-title class="text-h5 text-primary">
-            {{ order.ord_title }}
+            {{ order.title }}
           </v-card-title>
 
           <v-card-text class="text-body-1 text-grey-darken-2">
-            {{ order.ord_text }}
+            {{ order.text }}
           </v-card-text>
 
           <!-- Технологии -->
-          <v-card-text v-if="order.ord_stacks && order.ord_stacks.length">
+          <v-card-text v-if="order.stacks && order.stacks.length">
             <div class="text-subtitle-2 mb-2">Технологии:</div>
             <v-chip-group>
               <v-chip
-                v-for="stack in order.ord_stacks"
+                v-for="stack in order.stacks"
                 :key="stack.id"
                 color="primary"
                 variant="outlined"
@@ -85,20 +85,20 @@
           <v-row justify="space-between">
             <v-col cols="6">
               <div class="text-caption text-grey">Статус:</div>
-              <div :class="getStatusClass(order.ord_status)" class="text-subtitle-2">
-                {{ order.ord_status }}
+              <div :class="getStatusClass(order.status)" class="text-subtitle-2">
+                {{ order.status }}
               </div>
             </v-col>
             <v-col cols="6" class="text-right">
               <div class="text-caption text-grey">Цена:</div>
               <div class="text-subtitle-2 text-error">
-                {{ order.ord_price }} ₽
+                {{ order.price }} ₽
               </div>
             </v-col>
           </v-row>
 
           <div class="text-caption text-right text-grey mt-2">
-            Срок: {{ order.ord_time }}
+            Срок: {{ order.time }}
           </div>
 
           <v-card-actions class="justify-end">
@@ -123,7 +123,9 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const directions = ref([]) // Направления
 const languages = ref([])  // Языки
 const stacks = ref([])     // Технологии
@@ -140,11 +142,14 @@ onMounted(() => {
   filterOrders()
 })
 
-
 // Загружаем направления
 const getDirections = async () => {
-  const res = await axios.get('/api/directions')
-  directions.value = res.data
+  try {
+    const res = await axios.get('/api/directions')
+    directions.value = res.data
+  } catch (error) {
+    console.error('Ошибка при загрузке направлений:', error)
+  }
 }
 
 // Следим за выбором направления → загружаем языки
@@ -182,8 +187,12 @@ watch(selectedLanguage, async (newVal) => {
 // Загружаем технологии для выбранного языка и направления
 const fetchStacks = async () => {
   if (!selectedLanguage.value || !selectedDirection.value) return
-  const res = await axios.get(`/api/stacks/${selectedLanguage.value}/${selectedDirection.value}`)
-  stacks.value = res.data
+  try {
+    const res = await axios.get(`/api/stacks/${selectedLanguage.value}/${selectedDirection.value}`)
+    stacks.value = res.data
+  } catch (error) {
+    console.error('Ошибка при загрузке технологий:', error)
+  }
 }
 
 // Следим за выбором технологии
@@ -207,7 +216,20 @@ const filterOrders = async () => {
 }
 
 const viewDetails = (id) => {
-  console.log(`Перейти к деталям заказа: ${id}`)
+  router.push(`/order/${id}`)
+}
+
+const getStatusClass = (status) => {
+  switch (status) {
+    case 'В процессе':
+      return 'text-orange'
+    case 'Завершен':
+      return 'text-green'
+    case 'Отменен':
+      return 'text-red'
+    default:
+      return 'text-grey'
+  }
 }
 </script>
 

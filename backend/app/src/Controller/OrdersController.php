@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Orders;
 use App\Entity\OrdersStacks;
 use App\Repository\OrdersRepository;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -63,11 +64,23 @@ class OrdersController extends AbstractController
         }
 
         // Получаем заказы с фильтрами
-        $orders = $ordersRepository->findByFilters($direction, $language, $stacks);
+        $ordersArray = $ordersRepository->findByFilters($direction, $language, $stacks);
+
+// Преобразуем в коллекцию и фильтруем
+        $orders = (new ArrayCollection($ordersArray))
+            ->filter(fn($order) => $order->getOrdStatus() == 'Новый');
 
         // Преобразуем заказы в формат JSON
         $data = [];
         foreach ($orders as $order) {
+            $stacks = [];
+            foreach ($order->getOrdersStacks() as $orderStack) {
+                $stack = $orderStack->getStcId();
+                $stacks[] = [
+                    'id' => $stack->getId(),
+                    'title' => $stack->getStcTitle(),
+                ];
+            }
             $data[] = [
                 'id' => $order->getId(),
                 'title' => $order->getOrdTitle(),
@@ -75,6 +88,7 @@ class OrdersController extends AbstractController
                 'status' => $order->getOrdStatus(),
                 'price' => $order->getOrdPrice(),
                 'time' => $order->getOrdTime(),
+                'stacks' => $stacks
             ];
         }
 

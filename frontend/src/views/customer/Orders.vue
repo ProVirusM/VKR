@@ -57,19 +57,19 @@
           rounded="xl"
         >
           <v-card-title class="text-h5 text-primary">
-            {{ order.ord_title }}
+            {{ order.title }}
           </v-card-title>
 
           <v-card-text class="text-body-1 text-grey-darken-2">
-            {{ order.ord_text }}
+            {{ order.text }}
           </v-card-text>
 
           <!-- Технологии -->
-          <v-card-text v-if="order.ord_stacks && order.ord_stacks.length">
+          <v-card-text v-if="order.stacks && order.stacks.length">
             <div class="text-subtitle-2 mb-2">Технологии:</div>
             <v-chip-group>
               <v-chip
-                v-for="stack in order.ord_stacks"
+                v-for="stack in order.stacks"
                 :key="stack.id"
                 color="primary"
                 variant="outlined"
@@ -85,20 +85,20 @@
           <v-row justify="space-between">
             <v-col cols="6">
               <div class="text-caption text-grey">Статус:</div>
-              <div :class="getStatusClass(order.ord_status)" class="text-subtitle-2">
-                {{ order.ord_status }}
+              <div :class="getStatusClass(order.status)" class="text-subtitle-2">
+                {{ order.status }}
               </div>
             </v-col>
             <v-col cols="6" class="text-right">
               <div class="text-caption text-grey">Цена:</div>
               <div class="text-subtitle-2 text-error">
-                {{ order.ord_price }} ₽
+                {{ order.price }} ₽
               </div>
             </v-col>
           </v-row>
 
           <div class="text-caption text-right text-grey mt-2">
-            Срок: {{ order.ord_time }}
+            Срок: {{ order.time }}
           </div>
 
           <v-card-actions class="justify-end">
@@ -208,7 +208,7 @@ const filterOrders = async () => {
   if (selectedStacks.value) params.stacks = selectedStacks.value
 
   try {
-    const res = await axios.get('/api/customer/orders', { params })
+    const res = await axios.get('/api/orders', { params })
     filteredOrders.value = res.data
   } catch (error) {
     console.error('Ошибка при фильтрации заказов:', error)
@@ -258,3 +258,4 @@ const getStatusClass = (status) => {
   color: #f44336;
 }
 </style>
+
