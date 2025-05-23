@@ -1,5 +1,5 @@
 <template>
-  <v-container class="py-10">
+  <v-container>
     <v-card class="mx-auto pa-6" max-width="600" elevation="10" rounded="xl">
       <v-card-title class="text-h5 font-weight-bold text-center">Создание нового заказа</v-card-title>
       <v-card-text>
@@ -22,47 +22,75 @@
             dense
           />
 
-          <!-- Направление -->
-          <v-select
-            v-model="selectedDirection"
-            :items="directions"
-            item-text="title"
-            item-value="id"
-            label="Направление"
-            prepend-icon="mdi-map"
-            outlined
-            dense
-            :rules="[rules.required]"
-          />
+          <!-- Технологические группы -->
+          <div v-for="(techGroup, index) in technologyGroups" :key="index" class="mb-4">
+            <v-card class="pa-4" elevation="2">
+              <div class="d-flex justify-space-between align-center mb-4">
+                <h3 class="text-h6">Технология {{ index + 1 }}</h3>
+                <v-btn
+                  v-if="index > 0"
+                  color="error"
+                  icon
+                  @click="removeTechnologyGroup(index)"
+                >
+                  <v-icon>mdi-delete</v-icon>
+                </v-btn>
+              </div>
 
-          <!-- Язык -->
-          <v-select
-            v-model="selectedLanguage"
-            :items="languages"
-            item-text="title"
-            item-value="id"
-            label="Язык"
-            prepend-icon="mdi-translate"
-            outlined
-            dense
-            :disabled="!selectedDirection"
-            :rules="[rules.required]"
-          />
+              <!-- Направление -->
+              <v-select
+                v-model="techGroup.direction"
+                :items="directions"
+                item-text="title"
+                item-value="id"
+                label="Направление"
+                prepend-icon="mdi-map"
+                outlined
+                dense
+                :rules="[rules.required]"
+                @update:model-value="() => updateLanguages(index)"
+              />
 
-          <!-- Технологии -->
-          <v-select
-            v-model="form.stacks"
-            :items="stacks"
-            item-text="title"
-            item-value="id"
-            label="Технология"
-            prepend-icon="mdi-layers"
-            outlined
-            dense
-            :disabled="!selectedLanguage"
-            :rules="[rules.required]"
+              <!-- Язык -->
+              <v-select
+                v-model="techGroup.language"
+                :items="techGroup.languages"
+                item-text="title"
+                item-value="id"
+                label="Язык"
+                prepend-icon="mdi-translate"
+                outlined
+                dense
+                :disabled="!techGroup.direction"
+                :rules="[rules.required]"
+                @update:model-value="() => updateStacks(index)"
+              />
 
-          />
+              <!-- Технология -->
+              <v-select
+                v-model="techGroup.stack"
+                :items="techGroup.stacks"
+                item-text="title"
+                item-value="id"
+                label="Технология"
+                prepend-icon="mdi-layers"
+                outlined
+                dense
+                :disabled="!techGroup.language"
+                :rules="[rules.required]"
+              />
+            </v-card>
+          </div>
+
+          <v-btn
+            color="primary"
+            variant="outlined"
+            class="mb-4"
+            @click="addTechnologyGroup"
+            prepend-icon="mdi-plus"
+          >
+            Добавить технологию
+          </v-btn>
 
           <v-text-field
             v-model.number="form.price"
@@ -99,12 +127,15 @@
     </v-card>
   </v-container>
 </template>
+
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
 import { useToast } from 'vue-toastification'
+import { useRouter } from 'vue-router'
 
 const toast = useToast()
+const router = useRouter()
 
 const form = ref({
   title: '',
@@ -123,12 +154,19 @@ const rules = {
   positive: v => v > 0 || 'Должно быть положительное число',
 }
 
+// Технологические группы
+const technologyGroups = ref([
+  {
+    direction: null,
+    language: null,
+    stack: null,
+    languages: [],
+    stacks: []
+  }
+])
+
 // Выборы и списки
-const selectedDirection = ref(null)
-const selectedLanguage = ref(null)
 const directions = ref([])
-const languages = ref([])
-const stacks = ref([])
 
 // Получение текущего пользователя
 const fetchUser = async () => {
@@ -153,73 +191,98 @@ const fetchDirections = async () => {
   }
 }
 
+// Проверка на дубликаты технологий
+const checkDuplicateTechnology = (stackId, currentIndex) => {
+  for (let i = 0; i < technologyGroups.value.length; i++) {
+    if (i !== currentIndex && technologyGroups.value[i].stack === stackId) {
+      return i; // Возвращаем индекс группы с дубликатом
+    }
+  }
+  return -1; // Нет дубликатов
+}
+
 // Языки
-const fetchLanguages = async () => {
-  if (!selectedDirection.value) return
+const updateLanguages = async (index) => {
+  const group = technologyGroups.value[index]
+  if (!group.direction) return
+  
   try {
-    const res = await axios.get(`/api/languages/${selectedDirection.value}`)
-    languages.value = res.data
+    const res = await axios.get(`/api/languages/${group.direction}`)
+    group.languages = res.data
+    group.language = null
+    group.stack = null
+    group.stacks = []
   } catch (err) {
     console.error('Ошибка загрузки языков:', err)
+    toast.error('Ошибка при загрузке языков')
   }
 }
 
 // Стек
-const fetchStacks = async () => {
-  if (!selectedDirection.value || !selectedLanguage.value) return
+const updateStacks = async (index) => {
+  const group = technologyGroups.value[index]
+  if (!group.direction || !group.language) return
+  
   try {
-    const res = await axios.get(`/api/stacks/${selectedLanguage.value}/${selectedDirection.value}`)
-    stacks.value = res.data
+    const res = await axios.get(`/api/stacks/${group.language}/${group.direction}`)
+    group.stacks = res.data
+    group.stack = null
   } catch (err) {
     console.error('Ошибка загрузки стеков:', err)
+    toast.error('Ошибка при загрузке технологий')
   }
 }
 
-// Watchers
-watch(selectedDirection, () => {
-  selectedLanguage.value = null
-  stacks.value = []
-  fetchLanguages()
-})
+// Добавление новой группы технологий
+const addTechnologyGroup = () => {
+  technologyGroups.value.push({
+    direction: null,
+    language: null,
+    stack: null,
+    languages: [],
+    stacks: []
+  })
+}
 
-watch(selectedLanguage, () => {
-  form.value.stacks = []
-  fetchStacks()
-})
+// Удаление группы технологий
+const removeTechnologyGroup = (index) => {
+  technologyGroups.value.splice(index, 1)
+}
 
 // Submit
 const submit = async () => {
   if (!isValid.value || !user.value) return
   loading.value = true
-  console.log(form.value.stacks)
-  if (typeof form.value.stacks === 'number') {
-    form.value.stacks = [form.value.stacks]; // Преобразуем число в массив
+
+  // Собираем все выбранные стеки
+  const selectedStacks = technologyGroups.value
+    .filter(group => group.stack)
+    .map(group => group.stack)
+
+  if (selectedStacks.length === 0) {
+    toast.error('Выберите хотя бы одну технологию')
+    loading.value = false
+    return
   }
-  console.log(form.value.stacks)
+
   try {
-    await axios.post('/api/orders/', {
+    const orderResponse = await axios.post('/api/orders/', {
       ord_title: form.value.title,
       ord_text: form.value.text,
-      ord_status: 'Новый', // статус не выбирается
+      ord_status: 'Новый',
       ord_price: form.value.price,
       ord_time: form.value.time,
       cst_id: user.value.customerId,
-      ord_stacks: form.value.stacks // массив ID стеков
+      ord_stacks: selectedStacks
     })
-    console.log(form.value.stacks)
+
     toast.success('Заказ успешно создан!')
-
-    form.value = {
-      title: '',
-      text: '',
-      price: null,
-      time: '',
-      stacks: []
-    }
-
-    selectedDirection.value = null
-    selectedLanguage.value = null
-    stacks.value = []
+    
+    // Обновляем данные пользователя перед перенаправлением
+    await fetchUser()
+    
+    // Перенаправление на страницу активных заказов
+    router.push('/customer/active-orders')
   } catch (err) {
     toast.error('Ошибка при создании заказа')
     console.error(err)
@@ -228,8 +291,30 @@ const submit = async () => {
   }
 }
 
+// Следим за изменениями в выборе технологий
+watch(technologyGroups, (newGroups) => {
+  newGroups.forEach((group, index) => {
+    if (group.stack) {
+      const duplicateIndex = checkDuplicateTechnology(group.stack, index)
+      if (duplicateIndex !== -1) {
+        toast.warning('Эта технология уже выбрана')
+        // Сбрасываем значение у группы с дубликатом
+        technologyGroups.value[duplicateIndex].stack = null
+        // Обновляем список стеков для группы с дубликатом
+        updateStacks(duplicateIndex)
+      }
+    }
+  })
+}, { deep: true })
+
 onMounted(() => {
   fetchUser()
   fetchDirections()
 })
 </script>
+
+<style scoped>
+.v-card {
+  margin-bottom: 16px;
+}
+</style>

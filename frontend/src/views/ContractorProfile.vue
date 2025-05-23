@@ -36,11 +36,11 @@
           </div>
           <v-row v-if="contractor?.projects?.length" class="project-list">
             <v-col v-for="project in contractor.projects" :key="project.id" cols="12" md="6">
-              <v-card class="mb-4 project-card" elevation="2">
+              <v-card class="mb-4 project-card" elevation="2" @click="goToProject(project.id)" style="cursor: pointer">
                 <v-card-title class="font-weight-bold text-primary">{{ project.name }}</v-card-title>
                 <v-card-subtitle>
                   <v-icon size="18" color="grey-darken-1" class="mr-1">mdi-link-variant</v-icon>
-                  <a :href="project.repository" target="_blank">{{ project.repository }}</a>
+                  <a :href="project.repository" target="_blank" @click.stop>{{ project.repository }}</a>
                 </v-card-subtitle>
                 <v-card-text>{{ project.text }}</v-card-text>
                 <v-row v-if="project.photos && project.photos.length" class="mt-2">
@@ -71,7 +71,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="order in contractor.orders" :key="order.id">
+              <tr v-for="order in contractor.orders" :key="order.id" @click="goToOrder(order.id)" style="cursor: pointer">
                 <td>{{ order.title }}</td>
                 <td>
                   <v-chip :color="order.status === 'Завершен' ? 'success' : order.status === 'В работе' ? 'primary' : 'grey'" size="small">
@@ -121,9 +121,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
 const contractor = ref(null)
 const snackbar = ref({ show: false, text: '', color: 'success' })
 
@@ -134,6 +135,14 @@ const loadContractor = async () => {
   } catch (e) {
     snackbar.value = { show: true, text: 'Ошибка загрузки профиля', color: 'error' }
   }
+}
+
+const goToProject = (projectId) => {
+  router.push(`/projects/${projectId}`)
+}
+
+const goToOrder = (orderId) => {
+  router.push(`/contractor/orders/${orderId}`)
 }
 
 onMounted(loadContractor)

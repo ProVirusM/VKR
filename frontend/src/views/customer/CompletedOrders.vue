@@ -1,16 +1,17 @@
-
 <template>
-  <v-container>
-    <h2 class="text-center mb-6">История заказов</h2>
+  <v-container fluid class="py-10">
+    <v-row justify="center">
+      <v-col cols="12" md="8">
+        <h2 class="text-center mb-6">История заказов</h2>
 
-    <!-- Проверка, чтобы избежать ошибки на стадии рендеринга -->
-    <v-row v-if="orders && orders.length" dense>
-      <v-col
-        v-for="order in orders"
-        :key="order.id"
-        cols="12" sm="6" md="4"
-      >
-        <v-card class="pa-6" elevation="10" rounded="xl">
+        <!-- Проверка, чтобы избежать ошибки на стадии рендеринга -->
+        <v-card
+          v-for="order in orders"
+          :key="order.id"
+          class="mb-4 pa-6"
+          elevation="10"
+          rounded="xl"
+        >
           <v-card-title class="text-h5 text-primary">
             {{ order.ord_title }}
           </v-card-title>
@@ -19,12 +20,28 @@
             {{ order.ord_text }}
           </v-card-text>
 
+          <!-- Технологии -->
+          <v-card-text v-if="order.ord_stacks && order.ord_stacks.length">
+            <div class="text-subtitle-2 mb-2">Технологии:</div>
+            <v-chip-group>
+              <v-chip
+                v-for="stack in order.ord_stacks"
+                :key="stack.id"
+                color="primary"
+                variant="outlined"
+                class="ma-1"
+              >
+                {{ stack.title }}
+              </v-chip>
+            </v-chip-group>
+          </v-card-text>
+
           <v-divider class="my-4" />
 
           <v-row justify="space-between">
             <v-col cols="6">
               <div class="text-caption text-grey">Статус:</div>
-              <div :class="getStatusClass(order.status)" class="text-subtitle-2">
+              <div :class="getStatusClass(order.ord_status)" class="text-subtitle-2">
                 {{ order.ord_status }}
               </div>
             </v-col>
@@ -51,11 +68,11 @@
             </v-btn>
           </v-card-actions>
         </v-card>
+
+        <!-- Сообщение, если нет заказов -->
+        <p v-if="!orders.length" class="text-center">История заказов пуста.</p>
       </v-col>
     </v-row>
-
-    <!-- Сообщение, если нет заказов -->
-    <p v-else class="text-center">История заказов пуста.</p>
   </v-container>
 </template>
 
@@ -65,7 +82,6 @@ import axios from 'axios'
 import { useRouter } from 'vue-router'
 
 const orders = ref([])
-
 const router = useRouter()
 
 const viewDetails = (orderId) => {
@@ -91,7 +107,6 @@ onMounted(async () => {
     const res = await axios.get('/api/customer/completed-orders', {
       headers: { Authorization: `Bearer ${token}` }
     })
-    // orders.value = res.data
     orders.value = Object.values(res.data)
   } catch (error) {
     console.error('Ошибка при загрузке заказов', error)

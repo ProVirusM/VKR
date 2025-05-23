@@ -8,10 +8,14 @@ import CustomerOrders from '@/views/customer/Orders.vue'
 import ContractorReviews from '@/views/contractor/Reviews.vue'
 import ApprovedOrders from '@/views/contractor/ApprovedOrders.vue'
 import RespondedOrders from '@/views/contractor/RespondedOrders.vue'
+import ContractorOrderDetails from '@/views/contractor/OrderDetails.vue'
 //import Dashboard from '@/views/Dashboard.vue'
 //import Login from '@/views/Login.vue'
 import ActiveOrders from '@/views/customer/ActiveOrders.vue'
 import CompletedOrders from '@/views/customer/CompletedOrders.vue'
+import ProjectDetails from '../views/ProjectDetails.vue'
+import ProjectAnalysis from '../views/ProjectAnalysis.vue'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -58,6 +62,7 @@ const router = createRouter({
     { path: '/contractor/reviews', component: ContractorReviews },
     { path: '/contractor/approved-orders', component: ApprovedOrders },
     { path: '/contractor/responded-orders', component: RespondedOrders },
+    { path: '/contractor/orders/:id', component: ContractorOrderDetails },
     {
       path: '/order/:id',
       name: 'OrderDetails',
@@ -72,6 +77,18 @@ const router = createRouter({
       path: '/contractor/:id',
       name: 'ContractorProfile',
       component: () => import('@/views/ContractorProfile.vue')
+    },
+    {
+      path: '/projects/:id',
+      name: 'project-details',
+      component: ProjectDetails,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/projects/:id/analysis',
+      name: 'project-analysis',
+      component: ProjectAnalysis,
+      meta: { requiresAuth: true }
     },
   ],
 })
