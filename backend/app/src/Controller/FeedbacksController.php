@@ -9,6 +9,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use App\Entity\Contractors;
+use App\Entity\Customers;
 
 #[Route('/api/feedbacks')]
 class FeedbacksController extends AbstractController
@@ -28,8 +30,8 @@ class FeedbacksController extends AbstractController
                 'text' => $feedback->getFdbText(),
                 'estimation' => $feedback->getFdbEstimation(),
                 'timestamp' => $feedback->getFdbTimestamp()->format('Y-m-d H:i:s'),
-                'contractor_id' => $feedback->getCntId(),
-                'customer_id' => $feedback->getCstId(),
+                'contractor_id' => $feedback->getCntId()->getId(),
+                'customer_id' => $feedback->getCstId()->getId(),
             ];
         }
 
@@ -42,34 +44,52 @@ class FeedbacksController extends AbstractController
     #[Route('/', name: 'feedbacks_new', methods: ['POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+        try {
+            $data = json_decode($request->getContent(), true);
 
-        // Проверяем обязательные поля
-        $requiredFields = ['text', 'estimation', 'contractor_id', 'customer_id'];
-        foreach ($requiredFields as $field) {
-            if (!isset($data[$field])) {
-                return $this->json(['error' => "Missing \"$field\" field"], JsonResponse::HTTP_BAD_REQUEST);
+            // Проверяем обязательные поля
+            $requiredFields = ['text', 'estimation', 'contractor_id', 'customer_id'];
+            foreach ($requiredFields as $field) {
+                if (!isset($data[$field])) {
+                    return $this->json(['error' => "Missing \"$field\" field"], JsonResponse::HTTP_BAD_REQUEST);
+                }
             }
+
+            // Получаем сущности
+            $contractor = $entityManager->getRepository(Contractors::class)->find($data['contractor_id']);
+            if (!$contractor) {
+                return $this->json(['error' => 'Contractor not found'], 404);
+            }
+
+            $customer = $entityManager->getRepository(Customers::class)->find($data['customer_id']);
+            if (!$customer) {
+                return $this->json(['error' => 'Customer not found'], 404);
+            }
+
+            $feedback = new Feedbacks();
+            $feedback->setFdbText($data['text']);
+            $feedback->setFdbEstimation($data['estimation']);
+            $feedback->setFdbTimestamp(new \DateTime());
+            $feedback->setCntId($contractor);
+            $feedback->setCstId($customer);
+
+            $entityManager->persist($feedback);
+            $entityManager->flush();
+
+            return $this->json([
+                'id' => $feedback->getId(),
+                'text' => $feedback->getFdbText(),
+                'estimation' => $feedback->getFdbEstimation(),
+                'timestamp' => $feedback->getFdbTimestamp()->format('Y-m-d H:i:s'),
+                'contractor_id' => $feedback->getCntId()->getId(),
+                'customer_id' => $feedback->getCstId()->getId(),
+            ], JsonResponse::HTTP_CREATED);
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'An error occurred while creating the feedback',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        $feedback = new Feedbacks();
-        $feedback->setFdbText($data['text']);
-        $feedback->setFdbEstimation($data['estimation']);
-        $feedback->setFdbTimestamp(new \DateTime());
-        $feedback->setCntId($data['contractor_id']);
-        $feedback->setCstId($data['customer_id']);
-
-        $entityManager->persist($feedback);
-        $entityManager->flush();
-
-        return $this->json([
-            'id' => $feedback->getId(),
-            'text' => $feedback->getFdbText(),
-            'estimation' => $feedback->getFdbEstimation(),
-            'timestamp' => $feedback->getFdbTimestamp()->format('Y-m-d H:i:s'),
-            'contractor_id' => $feedback->getCntId(),
-            'customer_id' => $feedback->getCstId(),
-        ], JsonResponse::HTTP_CREATED);
     }
 
     /**
@@ -84,8 +104,8 @@ class FeedbacksController extends AbstractController
             'text' => $feedback->getFdbText(),
             'estimation' => $feedback->getFdbEstimation(),
             'timestamp' => $feedback->getFdbTimestamp()->format('Y-m-d H:i:s'),
-            'contractor_id' => $feedback->getCntId(),
-            'customer_id' => $feedback->getCstId(),
+            'contractor_id' => $feedback->getCntId()->getId(),
+            'customer_id' => $feedback->getCstId()->getId(),
         ]);
     }
 
@@ -107,11 +127,17 @@ class FeedbacksController extends AbstractController
         }
 
         if (isset($data['contractor_id'])) {
-            $feedback->setCntId($data['contractor_id']);
+            $contractor = $entityManager->getRepository(Contractors::class)->find($data['contractor_id']);
+            if ($contractor) {
+                $feedback->setCntId($contractor);
+            }
         }
 
         if (isset($data['customer_id'])) {
-            $feedback->setCstId($data['customer_id']);
+            $customer = $entityManager->getRepository(Customers::class)->find($data['customer_id']);
+            if ($customer) {
+                $feedback->setCstId($customer);
+            }
         }
 
         $entityManager->flush();
@@ -121,8 +147,8 @@ class FeedbacksController extends AbstractController
             'text' => $feedback->getFdbText(),
             'estimation' => $feedback->getFdbEstimation(),
             'timestamp' => $feedback->getFdbTimestamp()->format('Y-m-d H:i:s'),
-            'contractor_id' => $feedback->getCntId(),
-            'customer_id' => $feedback->getCstId(),
+            'contractor_id' => $feedback->getCntId()->getId(),
+            'customer_id' => $feedback->getCstId()->getId(),
         ]);
     }
 

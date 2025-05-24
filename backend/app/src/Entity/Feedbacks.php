@@ -53,27 +53,25 @@ class Feedbacks
         return $this;
     }
 
-    public function getCntId(): ?int
+    public function getCntId(): ?Contractors
     {
         return $this->cnt_id;
     }
 
-    public function setCntId(int $cnt_id): static
+    public function setCntId(?Contractors $cnt_id): static
     {
         $this->cnt_id = $cnt_id;
-
         return $this;
     }
 
-    public function getCstId(): ?int
+    public function getCstId(): ?Customers
     {
         return $this->cst_id;
     }
 
-    public function setCstId(int $cst_id): static
+    public function setCstId(?Customers $cst_id): static
     {
         $this->cst_id = $cst_id;
-
         return $this;
     }
 
@@ -85,7 +83,6 @@ class Feedbacks
     public function setFdbText(string $fdb_text): static
     {
         $this->fdb_text = $fdb_text;
-
         return $this;
     }
 
@@ -97,7 +94,6 @@ class Feedbacks
     public function setFdbEstimation(int $fdb_estimation): static
     {
         $this->fdb_estimation = $fdb_estimation;
-
         return $this;
     }
 
@@ -109,7 +105,6 @@ class Feedbacks
     public function setFdbTimestamp(\DateTimeInterface $fdb_timestamp): static
     {
         $this->fdb_timestamp = $fdb_timestamp;
-
         return $this;
     }
 }

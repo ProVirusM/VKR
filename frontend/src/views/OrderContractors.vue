@@ -152,15 +152,22 @@ const approveContractor = async (contractorId) => {
   loading.value = true
   const token = localStorage.getItem('token')
   try {
-    await axios.post(`/api/contractors/${contractorId}/approve`, {}, {
+    const response = await axios.post(`/api/orders/${orderId}/approve-contractor/${contractorId}`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     })
-    showNotification('Исполнитель успешно одобрен!')
-    // Обновляем список исполнителей
-    await loadContractors()
+    
+    if (response.data.message) {
+      showNotification(response.data.message, 'success')
+    } else {
+      showNotification('Исполнитель успешно одобрен!', 'success')
+    }
+    
+    // Перенаправляем на страницу завершенных заказов
+    router.push('/customer/completed-orders')
   } catch (error) {
     console.error('Ошибка при одобрении исполнителя', error)
-    showNotification('Не удалось одобрить исполнителя', 'error')
+    const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Не удалось одобрить исполнителя'
+    showNotification(errorMessage, 'error')
   } finally {
     loading.value = false
   }

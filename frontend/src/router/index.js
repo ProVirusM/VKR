@@ -15,6 +15,7 @@ import ActiveOrders from '@/views/customer/ActiveOrders.vue'
 import CompletedOrders from '@/views/customer/CompletedOrders.vue'
 import ProjectDetails from '../views/ProjectDetails.vue'
 import ProjectAnalysis from '../views/ProjectAnalysis.vue'
+import OrderFeedback from '../views/OrderFeedback.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -88,6 +89,12 @@ const router = createRouter({
       path: '/projects/:id/analysis',
       name: 'project-analysis',
       component: ProjectAnalysis,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/order/:id/feedback',
+      name: 'OrderFeedback',
+      component: OrderFeedback,
       meta: { requiresAuth: true }
     },
   ],

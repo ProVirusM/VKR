@@ -4,7 +4,10 @@ namespace App\Controller;
 
 use App\Entity\Orders;
 use App\Entity\OrdersStacks;
+use App\Entity\OrdersContractors;
+use App\Entity\Contractors;
 use App\Repository\OrdersRepository;
+use App\Repository\OrdersContractorsRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -14,6 +17,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use App\Repository\CustomersRepository;
 use App\Repository\StacksRepository;
+use App\Repository\ContractorsRepository;
 #[Route('/api/orders')]
 class OrdersController extends AbstractController
 {
@@ -22,11 +26,20 @@ class OrdersController extends AbstractController
      */
     private $customerRepository;  // Делаем переменную доступной в контроллере
     private $stackRepository;
+    private $contractorRepository;
+    private $ordersContractorsRepository;
     // Внедряем репозиторий через конструктор
-    public function __construct(CustomersRepository $customerRepository, StacksRepository $stackRepository)
+    public function __construct(
+        CustomersRepository $customerRepository, 
+        StacksRepository $stackRepository,
+        ContractorsRepository $contractorRepository,
+        OrdersContractorsRepository $ordersContractorsRepository
+    )
     {
         $this->customerRepository = $customerRepository;
         $this->stackRepository = $stackRepository;
+        $this->contractorRepository = $contractorRepository;
+        $this->ordersContractorsRepository = $ordersContractorsRepository;
     }
     #[Route('/', name: 'orders_index', methods: ['GET'])]
 //    public function index(OrdersRepository $ordersRepository): JsonResponse
@@ -198,13 +211,18 @@ class OrdersController extends AbstractController
      * Удалить заказ (DELETE /api/orders/{ord_id})
      */
     #[Route('/{ord_id}', name: 'orders_delete', methods: ['DELETE'])]
-    #[ParamConverter('order', options: ['mapping' => ['ord_id' => 'ord_id']])]
-    public function delete(Orders $order, EntityManagerInterface $entityManager): JsonResponse
+    public function delete(int $ord_id, EntityManagerInterface $entityManager): JsonResponse
     {
+        $order = $entityManager->getRepository(Orders::class)->find($ord_id);
+        
+        if (!$order) {
+            return $this->json(['error' => 'Заказ не найден'], 404);
+        }
+
         $entityManager->remove($order);
         $entityManager->flush();
 
-        return $this->json(['message' => 'Order deleted successfully']);
+        return $this->json(['message' => 'Заказ успешно удален']);
     }
 
     #[Route('/{id}/full', name: 'order_full', methods: ['GET'])]
@@ -262,5 +280,99 @@ class OrdersController extends AbstractController
         return $this->json($result);
     }
 
+    #[Route('/{orderId}/approve-contractor/{contractorId}', name: 'approve_contractor', methods: ['POST'])]
+    public function approveContractor(
+        int $orderId,
+        int $contractorId,
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        try {
+            // Находим заказ
+            $order = $entityManager->getRepository(Orders::class)->find($orderId);
+            if (!$order) {
+                return $this->json(['error' => 'Order not found'], 404);
+            }
 
+            // Находим исполнителя
+            $contractor = $entityManager->getRepository(Contractors::class)->find($contractorId);
+            if (!$contractor) {
+                return $this->json(['error' => 'Contractor not found'], 404);
+            }
+
+            // Находим связь заказа с исполнителем
+            $orderContractor = $entityManager->getRepository(OrdersContractors::class)->findOneBy([
+                'ord_id' => $order,
+                'cnt_id' => $contractor
+            ]);
+
+            if (!$orderContractor) {
+                return $this->json(['error' => 'Contractor is not associated with this order'], 404);
+            }
+
+            // Обновляем статус заказа
+            $order->setOrdStatus('Завершен');
+
+            // Обновляем статус связи с исполнителем
+            $orderContractor->setOrdCntStatus('Назначен');
+
+            // Сохраняем изменения
+            $entityManager->flush();
+
+            return $this->json([
+                'message' => 'Contractor approved successfully',
+                'order' => [
+                    'id' => $order->getId(),
+                    'status' => $order->getOrdStatus()
+                ],
+                'contractor' => [
+                    'id' => $contractor->getId(),
+                    'status' => $orderContractor->getOrdCntStatus()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'An error occurred while approving the contractor',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/{orderId}/approved-contractor', name: 'get_approved_contractor', methods: ['GET'])]
+    public function getApprovedContractor(
+        int $orderId,
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        try {
+            $order = $entityManager->getRepository(Orders::class)->find($orderId);
+            if (!$order) {
+                return $this->json(['error' => 'Order not found'], 404);
+            }
+
+            // Находим связь заказа с исполнителем, где статус "Назначен"
+            $orderContractor = $entityManager->getRepository(OrdersContractors::class)->findOneBy([
+                'ord_id' => $order,
+                'ord_cnt_status' => 'Назначен'
+            ]);
+
+            if (!$orderContractor) {
+                return $this->json(['error' => 'No approved contractor found for this order'], 404);
+            }
+
+            $contractor = $orderContractor->getCntId();
+            $user = $contractor->getUsrId();
+
+            return $this->json([
+                'contractorId' => $contractor->getId(),
+                'userName' => $user->getUsrName(),
+                'userSurname' => $user->getUsrSurname(),
+                'userPatronymic' => $user->getUsrPatronymic(),
+                'status' => $orderContractor->getOrdCntStatus()
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'An error occurred while getting the approved contractor',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

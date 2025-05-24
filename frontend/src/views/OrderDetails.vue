@@ -28,6 +28,29 @@
           </v-col>
         </v-row>
 
+        <!-- Информация об утвержденном исполнителе -->
+        <v-card v-if="order.ord_status === 'Завершен' && approvedContractor" class="mb-4 pa-4" variant="outlined">
+          <div class="d-flex align-center mb-2">
+            <v-icon color="success" class="mr-2">mdi-account-check</v-icon>
+            <strong>Утвержденный исполнитель:</strong>
+          </div>
+          <v-card class="contractor-card pa-3" @click="goToContractorProfile(approvedContractor.contractorId)">
+            <div class="d-flex align-center">
+              <v-avatar size="40" color="primary" class="mr-3">
+                <span class="text-h6 white--text">
+                  {{ approvedContractor.userName ? approvedContractor.userName.charAt(0).toUpperCase() : '' }}
+                </span>
+              </v-avatar>
+              <div>
+                <div class="text-subtitle-1 font-weight-bold">
+                  {{ approvedContractor.userSurname }} {{ approvedContractor.userName }} {{ approvedContractor.userPatronymic }}
+                </div>
+                <div class="text-caption text-grey">Нажмите, чтобы просмотреть профиль</div>
+              </div>
+            </div>
+          </v-card>
+        </v-card>
+
         <v-divider class="my-4" />
 
         <div class="mb-3">
@@ -52,13 +75,22 @@
         <v-btn color="grey" variant="outlined" @click="$router.back()">Назад</v-btn>
 
         <template v-if="Array.isArray(user.roles)">
-          <v-btn
-            v-if="user.roles.includes('customer')"
-            color="primary"
-            @click="goToResponders"
-          >
-            Откликнувшиеся
-          </v-btn>
+          <template v-if="user.roles.includes('customer')">
+            <v-btn
+              v-if="order.ord_status !== 'Завершен'"
+              color="primary"
+              @click="goToResponders"
+            >
+              Откликнувшиеся
+            </v-btn>
+            <v-btn
+              v-if="order.ord_status === 'Завершен'"
+              color="success"
+              @click="goToFeedback"
+            >
+              Оставить отзыв
+            </v-btn>
+          </template>
           <v-btn
             v-else-if="user.roles.includes('contractor')"
             color="success"
@@ -67,6 +99,13 @@
             Откликнуться
           </v-btn>
         </template>
+        <v-btn
+          v-if="user && Array.isArray(user.roles) && user.roles.includes('customer') && order && order.ord_status === 'Новый'"
+          color="error"
+          @click="deleteOrder"
+        >
+          Удалить заказ
+        </v-btn>
       </v-card-actions>
     </v-card>
 
@@ -74,6 +113,55 @@
       <v-progress-circular indeterminate color="primary" size="50" />
       <p class="mt-3">Загрузка заказа...</p>
     </div>
+
+    <!-- Диалог подтверждения удаления -->
+    <v-dialog v-model="deleteDialog" max-width="400">
+      <v-card>
+        <v-card-title class="text-h5">
+          Подтверждение удаления
+        </v-card-title>
+
+        <v-card-text>
+          Вы уверены, что хотите удалить этот заказ? Это действие нельзя будет отменить.
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="grey-darken-1"
+            variant="text"
+            @click="deleteDialog = false"
+          >
+            Отмена
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="text"
+            @click="confirmDelete"
+          >
+            Удалить
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Snackbar для уведомлений -->
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      :timeout="3000"
+      location="top"
+    >
+      {{ snackbar.text }}
+      <template v-slot:actions>
+        <v-btn
+          variant="text"
+          @click="snackbar.show = false"
+        >
+          Закрыть
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-container>
 </template>
 
@@ -90,6 +178,24 @@ const stacks = ref([])
 const user = ref(null)
 const isLoading = ref(true)
 const error = ref(null)
+const approvedContractor = ref(null)
+const deleteDialog = ref(false)
+
+// Состояние для Snackbar
+const snackbar = ref({
+  show: false,
+  text: '',
+  color: 'success'
+})
+
+// Функция для показа уведомлений
+const showNotification = (text, color = 'success') => {
+  snackbar.value = {
+    show: true,
+    text,
+    color
+  }
+}
 
 // Получаем токен безопасным способом
 const token = ref('')
@@ -117,6 +223,18 @@ const loadData = async () => {
     order.value = orderRes.data?.order || null
     stacks.value = orderRes.data?.stacks || []
     user.value = userRes.data || null
+
+    // Если заказ завершен, загружаем информацию об утвержденном исполнителе
+    if (order.value?.ord_status === 'Завершен') {
+      try {
+        const approvedContractorRes = await axios.get(`/api/orders/${id}/approved-contractor`, {
+          headers: { Authorization: `Bearer ${token.value}` }
+        })
+        approvedContractor.value = approvedContractorRes.data
+      } catch (err) {
+        console.error('Ошибка при загрузке утвержденного исполнителя:', err)
+      }
+    }
   } catch (err) {
     error.value = err.response?.data?.message || err.message
     console.error('Ошибка:', err)
@@ -159,10 +277,58 @@ const respondToOrder = async () => {
 const goToResponders = () => {
   router.push(`/customer/orders/${route.params.id}/responders`)
 }
+
+const goToContractorProfile = (contractorId) => {
+  router.push(`/contractor/${contractorId}`)
+}
+
+const goToFeedback = () => {
+  router.push(`/order/${route.params.id}/feedback`)
+}
+
+const deleteOrder = () => {
+  deleteDialog.value = true
+}
+
+const confirmDelete = async () => {
+  deleteDialog.value = false; // Закрываем диалог сразу
+  try {
+    if (!token.value) {
+      router.push('/login');
+      return;
+    }
+
+    const response = await axios.delete(`/api/orders/${route.params.id}`, {
+      headers: {
+        'Authorization': `Bearer ${token.value}`
+      }
+    });
+
+    if (response.status === 200) {
+      showNotification('Заказ успешно удален!', 'success');
+      setTimeout(() => {
+        router.push('/customer/active-orders');
+      }, 1500);
+    }
+  } catch (err) {
+    console.error('Ошибка при удалении заказа:', err);
+    showNotification(err.response?.data?.message || 'Произошла ошибка при удалении заказа', 'error');
+  }
+}
 </script>
 
 <style scoped>
 .gap-2 {
   gap: 8px;
+}
+
+.contractor-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.contractor-card:hover {
+  background-color: #f5f5f5;
+  transform: translateY(-2px);
 }
 </style>

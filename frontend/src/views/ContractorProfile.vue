@@ -89,19 +89,30 @@
 
         <!-- Отзывы -->
         <v-card class="pa-6" elevation="4">
-          <div class="d-flex align-center mb-4">
-            <v-icon color="amber-darken-2" class="mr-2">mdi-star-outline</v-icon>
-            <h3 class="text-h5 font-weight-bold mb-0">Отзывы</h3>
+          <div class="d-flex align-center justify-space-between mb-4">
+            <div class="d-flex align-center">
+              <v-icon color="amber-darken-2" class="mr-2">mdi-star-outline</v-icon>
+              <h3 class="text-h5 font-weight-bold mb-0">Отзывы</h3>
+            </div>
+            <v-select
+              v-model="feedbackSort"
+              :items="feedbackSortOptions"
+              label="Сортировка"
+              density="compact"
+              variant="outlined"
+              class="feedback-sort"
+              hide-details
+            ></v-select>
           </div>
-          <v-row v-if="contractor?.feedbacks?.length">
-            <v-col v-for="feedback in contractor.feedbacks" :key="feedback.id" cols="12">
+          <v-row v-if="sortedFeedbacks.length">
+            <v-col v-for="feedback in sortedFeedbacks" :key="feedback.id" cols="12">
               <v-alert :type="feedback.estimation >= 4 ? 'success' : feedback.estimation >= 3 ? 'warning' : 'error'" class="mb-2">
                 <div class="font-weight-bold mb-1">
                   <v-icon left size="18" color="amber">mdi-star</v-icon>
                   Оценка: {{ feedback.estimation }}
                 </div>
                 <div>{{ feedback.text }}</div>
-                <div class="text-grey text-caption mt-1">{{ feedback.timestamp }}</div>
+                <div class="text-caption mt-1">{{ feedback.timestamp }}</div>
               </v-alert>
             </v-col>
           </v-row>
@@ -119,7 +130,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -127,6 +138,33 @@ const route = useRoute()
 const router = useRouter()
 const contractor = ref(null)
 const snackbar = ref({ show: false, text: '', color: 'success' })
+const feedbackSort = ref('highToLow')
+
+const feedbackSortOptions = [
+  { title: 'Сначала с высокой оценкой', value: 'highToLow' },
+  { title: 'Сначала с низкой оценкой', value: 'lowToHigh' },
+  { title: 'По дате (сначала новые)', value: 'newToOld' },
+  { title: 'По дате (сначала старые)', value: 'oldToNew' }
+]
+
+const sortedFeedbacks = computed(() => {
+  if (!contractor.value?.feedbacks) return []
+  
+  const feedbacks = [...contractor.value.feedbacks]
+  
+  switch (feedbackSort.value) {
+    case 'highToLow':
+      return feedbacks.sort((a, b) => b.estimation - a.estimation)
+    case 'lowToHigh':
+      return feedbacks.sort((a, b) => a.estimation - b.estimation)
+    case 'newToOld':
+      return feedbacks.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    case 'oldToNew':
+      return feedbacks.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    default:
+      return feedbacks
+  }
+})
 
 const loadContractor = async () => {
   try {
@@ -162,4 +200,7 @@ onMounted(loadContractor)
 .orders-table th, .orders-table td {
   padding: 8px 12px;
 }
-</style> 
+.feedback-sort {
+  max-width: 250px;
+}
+</style>
