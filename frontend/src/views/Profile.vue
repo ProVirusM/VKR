@@ -16,6 +16,8 @@
           <v-btn class="mt-3" color="primary" @click="goToReviews">Мои отзывы</v-btn>
           <v-btn class="mt-3" @click="goToApprovedOrders">Утвержденные заказы</v-btn>
           <v-btn class="mt-3" @click="goToRespondedOrders">Отозвавшиеся заказы</v-btn>
+          <v-btn class="mt-3" color="primary" @click="goToMyProjects">Мои проекты</v-btn>
+          <v-btn class="mt-3" color="primary" @click="goToCreateProject">Создать проект</v-btn>
         </template>
       </v-card-text>
 
@@ -57,4 +59,6 @@ const goToApprovedOrders = () => router.push('/contractor/approved-orders')
 const goToRespondedOrders = () => router.push('/contractor/responded-orders')
 const goToActiveOrders = () => router.push('/customer/active-orders')
 const goToCompletedOrders = () => router.push('/customer/completed-orders')
+const goToMyProjects = () => router.push('/contractor/projects')
+const goToCreateProject = () => router.push('/contractor/create-project')
 </script>

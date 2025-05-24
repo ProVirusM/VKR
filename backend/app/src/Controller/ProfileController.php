@@ -205,4 +205,77 @@ class ProfileController extends AbstractController
 
         return $this->json($reviewsData);
     }
+
+    #[Route('/api/contractor/projects', name: 'contractor_projects', methods: ['GET'])]
+    public function getContractorProjects(UserInterface $user): JsonResponse
+    {
+        /** @var \App\Entity\User $user */
+        $contractor = $this->contractorsRepository->findOneBy(['usr_id' => $user->getId()]);
+
+        if (!$contractor) {
+            return $this->json([]);
+        }
+
+        // Получаем проекты через репозиторий ProjectsGitHubRepository
+        $projects = $this->entityManager->getRepository(\App\Entity\ProjectsGitHub::class)
+            ->findBy(['cnt_id' => $contractor->getId()]);
+
+        $projectsData = [];
+        foreach ($projects as $project) {
+            // Получаем фотографии проекта
+            $photos = $this->entityManager->getRepository(\App\Entity\PhotosProjectsGitHub::class)
+                ->findBy(['pgh_id' => $project->getId()]);
+
+            $photosData = [];
+            foreach ($photos as $photo) {
+                $photosData[] = [
+                    'id' => $photo->getId(),
+                    'link' => $photo->getPpghLink()
+                ];
+            }
+
+            $projectsData[] = [
+                'id' => $project->getId(),
+                'title' => $project->getPghName(),
+                'description' => $project->getPghText(),
+                'github_link' => $project->getPghRepository(),
+                'photos' => $photosData
+            ];
+        }
+
+        return $this->json($projectsData);
+    }
+
+    #[Route('/api/contractor/projects', name: 'contractor_create_project', methods: ['POST'])]
+    public function createProject(Request $request, UserInterface $user): JsonResponse
+    {
+        /** @var \App\Entity\User $user */
+        $contractor = $this->contractorsRepository->findOneBy(['usr_id' => $user->getId()]);
+
+        if (!$contractor) {
+            return $this->json(['error' => 'Contractor not found'], JsonResponse::HTTP_NOT_FOUND);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['title']) || !isset($data['github_link'])) {
+            return $this->json(['error' => 'Title and GitHub link are required'], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        $project = new \App\Entity\ProjectsGitHub();
+        $project->setPghName($data['title']);
+        $project->setPghText($data['description'] ?? '');
+        $project->setPghRepository($data['github_link']);
+        $project->setCntId($contractor);
+
+        $this->entityManager->persist($project);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'id' => $project->getId(),
+            'title' => $project->getPghName(),
+            'description' => $project->getPghText(),
+            'github_link' => $project->getPghRepository()
+        ], JsonResponse::HTTP_CREATED);
+    }
 }

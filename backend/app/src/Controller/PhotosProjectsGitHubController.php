@@ -10,10 +10,110 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 #[Route('/api/project-photos')]
 class PhotosProjectsGitHubController extends AbstractController
 {
+    private $slugger;
+    private $uploadDir;
+
+    public function __construct(SluggerInterface $slugger, ParameterBagInterface $parameterBag)
+    {
+        $this->slugger = $slugger;
+        $projectDir = $parameterBag->get('kernel.project_dir');
+        $this->uploadDir = $projectDir . '/public/uploads/projects/';
+        
+        // Создаем директорию, если она не существует
+        if (!file_exists($this->uploadDir)) {
+            mkdir($this->uploadDir, 0777, true);
+        }
+    }
+
+    /**
+     * Получить все фотографии проекта (GET /api/project-photos/project/{project_id})
+     */
+    #[Route('/project/{project_id}', name: 'photos_projects_github_by_project', methods: ['GET'])]
+    public function getByProject(int $project_id, PhotosProjectsGitHubRepository $photosProjectsGitHubRepository): JsonResponse
+    {
+        $photos = $photosProjectsGitHubRepository->findBy(['pgh_id' => $project_id]);
+
+        $data = [];
+        foreach ($photos as $photo) {
+            $data[] = [
+                'id' => $photo->getId(),
+                'link' => $photo->getPpghLink(),
+                'project_id' => $photo->getPghId()?->getId(),
+            ];
+        }
+
+        return $this->json($data);
+    }
+
+    /**
+     * Загрузить фотографию проекта (POST /api/project-photos/upload/{project_id})
+     */
+    #[Route('/upload/{project_id}', name: 'photos_projects_github_upload', methods: ['POST'])]
+    public function upload(Request $request, int $project_id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $file = $request->files->get('photo');
+        
+        if (!$file) {
+            return $this->json(['error' => 'No file uploaded'], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        // Генерируем уникальное имя файла
+        $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeFilename = $this->slugger->slug($originalFilename);
+        $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
+
+        try {
+            $file->move($this->uploadDir, $newFilename);
+             // Log successful file move
+            error_log('File successfully moved to: ' . $this->uploadDir . $newFilename);
+        } catch (\Exception $e) {
+             // Log file move error
+            error_log('Failed to move file: ' . $e->getMessage());
+            return $this->json(['error' => 'Failed to upload file'], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        $photo = new PhotosProjectsGitHub();
+        $photo->setPpghLink('/uploads/projects/' . $newFilename);
+
+        // Получаем сущность ProjectsGitHub по ID
+        $project = $entityManager->getRepository(\App\Entity\ProjectsGitHub::class)->find($project_id);
+
+        if (!$project) {
+             // Log project not found
+            error_log('Project with ID ' . $project_id . ' not found.');
+            return $this->json(['error' => 'Project not found'], JsonResponse::HTTP_NOT_FOUND);
+        }
+         // Log project found
+        error_log('Project with ID ' . $project_id . ' found.');
+
+        $photo->setPghId($project);
+
+        try {
+            $entityManager->persist($photo);
+             // Log photo entity persisted
+            error_log('PhotosProjectsGitHub entity persisted.');
+            $entityManager->flush();
+             // Log entity manager flushed
+            error_log('EntityManager flushed successfully.');
+        } catch (\Exception $e) {
+             // Log database error
+            error_log('Database error while saving photo: ' . $e->getMessage());
+            return $this->json(['error' => 'Failed to save photo to database'], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return $this->json([
+            'id' => $photo->getId(),
+            'link' => $photo->getPpghLink(),
+            'project_id' => $photo->getPghId()?->getId()
+        ], JsonResponse::HTTP_CREATED);
+    }
+
     /**
      * Получить все фотографии проектов (GET /api/project-photos)
      */

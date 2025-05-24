@@ -92,6 +92,16 @@
                 Отозвавшиеся заказы
               </v-btn>
             </v-col>
+            <v-col cols="12" md="4">
+              <v-btn block color="primary" @click="goToMyProjects" prepend-icon="mdi-folder-multiple-outline">
+                Мои проекты
+              </v-btn>
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-btn block color="primary" @click="goToCreateProject" prepend-icon="mdi-plus-box-outline">
+                Создать проект
+              </v-btn>
+            </v-col>
           </template>
         </template>
       </v-row>
@@ -134,6 +144,8 @@ const goToApprovedOrders = () => router.push('/contractor/approved-orders')
 const goToRespondedOrders = () => router.push('/contractor/responded-orders')
 const goToActiveOrders = () => router.push('/customer/active-orders')
 const goToCompletedOrders = () => router.push('/customer/completed-orders')
+const goToMyProjects = () => router.push('/contractor/projects')
+const goToCreateProject = () => router.push('/contractor/create-project')
 </script>
 
 

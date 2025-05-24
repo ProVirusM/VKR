@@ -9,6 +9,8 @@ import ContractorReviews from '@/views/contractor/Reviews.vue'
 import ApprovedOrders from '@/views/contractor/ApprovedOrders.vue'
 import RespondedOrders from '@/views/contractor/RespondedOrders.vue'
 import ContractorOrderDetails from '@/views/contractor/OrderDetails.vue'
+import Projects from '@/views/contractor/Projects.vue'
+import CreateProject from '@/views/contractor/CreateProject.vue'
 //import Dashboard from '@/views/Dashboard.vue'
 //import Login from '@/views/Login.vue'
 import ActiveOrders from '@/views/customer/ActiveOrders.vue'
@@ -64,6 +66,9 @@ const router = createRouter({
     { path: '/contractor/approved-orders', component: ApprovedOrders },
     { path: '/contractor/responded-orders', component: RespondedOrders },
     { path: '/contractor/orders/:id', component: ContractorOrderDetails },
+    { path: '/contractor/projects', component: Projects },
+    { path: '/contractor/create-project', component: CreateProject },
+    { path: '/contractor/projects/:id', component: ProjectDetails },
     {
       path: '/order/:id',
       name: 'OrderDetails',
