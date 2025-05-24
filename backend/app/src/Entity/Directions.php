@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: DirectionsRepository::class)]
+#[ORM\Index(columns: ["drc_title"], name: "drc_title_idx", options: ["unique" => true])]
 class Directions
 {
     #[ORM\Id]
@@ -18,7 +19,7 @@ class Directions
 //    #[ORM\Column]
 //    private ?int $drc_id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, unique: true)]
     private ?string $drc_title = null;
 
     /**

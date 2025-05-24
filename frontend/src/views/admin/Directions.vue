@@ -119,6 +119,11 @@ const createDirection = async () => {
     await fetchDirections()
   } catch (error) {
     console.error('Error creating direction:', error)
+    if (error.response?.status === 409) {
+      alert('Направление с таким названием уже существует')
+    } else {
+      alert('Ошибка при создании направления')
+    }
   } finally {
     loading.value = false
   }
@@ -141,6 +146,11 @@ const saveDirection = async () => {
     await fetchDirections()
   } catch (error) {
     console.error('Error updating direction:', error)
+    if (error.response?.status === 409) {
+      alert('Направление с таким названием уже существует')
+    } else {
+      alert('Ошибка при обновлении направления')
+    }
   } finally {
     loading.value = false
   }

@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: StacksRepository::class)]
+#[ORM\Index(columns: ["stc_title"], name: "stc_title_idx", options: ["unique" => true])]
 class Stacks
 {
     #[ORM\Id]
@@ -18,7 +19,7 @@ class Stacks
 //    #[ORM\Column]
 //    private ?int $stc_id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, unique: true)]
     private ?string $stc_title = null;
 
 

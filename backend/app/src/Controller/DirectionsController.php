@@ -47,16 +47,22 @@ class DirectionsController extends AbstractController
             return $this->json(['error' => 'Missing "title" field'], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        $direction = new Directions();
-        $direction->setDrcTitle($data['title']);
+        try {
+            $direction = new Directions();
+            $direction->setDrcTitle($data['title']);
 
-        $this->entityManager->persist($direction);
-        $this->entityManager->flush();
+            $this->entityManager->persist($direction);
+            $this->entityManager->flush();
 
-        return $this->json([
-            'id' => $direction->getId(),
-            'title' => $direction->getDrcTitle(),
-        ], JsonResponse::HTTP_CREATED);
+            return $this->json([
+                'id' => $direction->getId(),
+                'title' => $direction->getDrcTitle(),
+            ], JsonResponse::HTTP_CREATED);
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
+            return $this->json(['error' => 'Direction with this title already exists'], JsonResponse::HTTP_CONFLICT);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to create direction'], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
@@ -103,8 +109,10 @@ class DirectionsController extends AbstractController
                 'id' => $direction->getId(),
                 'title' => $direction->getDrcTitle(),
             ]);
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
+            return $this->json(['error' => 'Direction with this title already exists'], JsonResponse::HTTP_CONFLICT);
         } catch (\Exception $e) {
-            return $this->json(['error' => 'Failed to update direction: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->json(['error' => 'Failed to update direction'], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 

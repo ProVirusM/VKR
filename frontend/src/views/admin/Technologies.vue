@@ -204,6 +204,11 @@ const createTechnology = async () => {
     await fetchTechnologies()
   } catch (error) {
     console.error('Error creating technology:', error)
+    if (error.response?.status === 409) {
+      alert('Технология с таким названием уже существует')
+    } else {
+      alert('Ошибка при создании технологии')
+    }
   } finally {
     loading.value = false
   }
@@ -228,6 +233,11 @@ const saveTechnology = async () => {
     await fetchTechnologies()
   } catch (error) {
     console.error('Error updating technology:', error)
+    if (error.response?.status === 409) {
+      alert('Технология с таким названием уже существует')
+    } else {
+      alert('Ошибка при обновлении технологии')
+    }
   } finally {
     loading.value = false
   }

@@ -119,6 +119,11 @@ const createLanguage = async () => {
     await fetchLanguages()
   } catch (error) {
     console.error('Error creating language:', error)
+    if (error.response?.status === 409) {
+      alert('Язык с таким названием уже существует')
+    } else {
+      alert('Ошибка при создании языка')
+    }
   } finally {
     loading.value = false
   }
@@ -139,10 +144,13 @@ const saveLanguage = async () => {
     })
     editDialog.value = false
     await fetchLanguages()
-    alert('Язык успешно обновлен')
   } catch (error) {
     console.error('Error updating language:', error)
-    alert(error.response?.data?.error || 'Ошибка при обновлении языка')
+    if (error.response?.status === 409) {
+      alert('Язык с таким названием уже существует')
+    } else {
+      alert('Ошибка при обновлении языка')
+    }
   } finally {
     loading.value = false
   }

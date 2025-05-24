@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: LanguagesRepository::class)]
+#[ORM\Index(columns: ["lng_title"], name: "lng_title_idx", options: ["unique" => true])]
 class Languages
 {
     #[ORM\Id]
@@ -18,7 +19,7 @@ class Languages
 //    #[ORM\Column]
 //    private ?int $lng_id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, unique: true)]
     private ?string $lng_title = null;
 
     /**

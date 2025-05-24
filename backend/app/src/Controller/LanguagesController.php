@@ -71,16 +71,22 @@ class LanguagesController extends AbstractController
             return $this->json(['error' => 'Missing "title" field'], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        $language = new Languages();
-        $language->setLngTitle($data['title']);
+        try {
+            $language = new Languages();
+            $language->setLngTitle($data['title']);
 
-        $this->entityManager->persist($language);
-        $this->entityManager->flush();
+            $this->entityManager->persist($language);
+            $this->entityManager->flush();
 
-        return $this->json([
-            'id' => $language->getId(),
-            'title' => $language->getLngTitle(),
-        ], JsonResponse::HTTP_CREATED);
+            return $this->json([
+                'id' => $language->getId(),
+                'title' => $language->getLngTitle(),
+            ], JsonResponse::HTTP_CREATED);
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
+            return $this->json(['error' => 'Language with this title already exists'], JsonResponse::HTTP_CONFLICT);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to create language'], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
@@ -122,8 +128,10 @@ class LanguagesController extends AbstractController
                 'id' => $language->getId(),
                 'title' => $language->getLngTitle(),
             ]);
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
+            return $this->json(['error' => 'Language with this title already exists'], JsonResponse::HTTP_CONFLICT);
         } catch (\Exception $e) {
-            return $this->json(['error' => 'Failed to update language: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->json(['error' => 'Failed to update language'], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 

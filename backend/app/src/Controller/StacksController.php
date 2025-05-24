@@ -141,8 +141,10 @@ class StacksController extends AbstractController
                 'direction_id' => $stack->getDrcId()?->getId(),
                 'language_id' => $stack->getLngId()?->getId()
             ], JsonResponse::HTTP_CREATED);
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
+            return $this->json(['error' => 'Technology with this title already exists'], JsonResponse::HTTP_CONFLICT);
         } catch (\Exception $e) {
-            return $this->json(['error' => 'Failed to create stack: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->json(['error' => 'Failed to create technology'], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -189,7 +191,7 @@ class StacksController extends AbstractController
             $stack = $this->stacksRepository->find($id);
             
             if (!$stack) {
-                return $this->json(['error' => 'Stack not found'], JsonResponse::HTTP_NOT_FOUND);
+                return $this->json(['error' => 'Technology not found'], JsonResponse::HTTP_NOT_FOUND);
             }
 
             $data = json_decode($request->getContent(), true);
@@ -199,11 +201,19 @@ class StacksController extends AbstractController
             }
 
             if (isset($data['direction_id'])) {
-                $stack->setDrcId($data['direction_id']);
+                $direction = $this->directionsRepository->find($data['direction_id']);
+                if (!$direction) {
+                    return $this->json(['error' => 'Direction not found'], JsonResponse::HTTP_NOT_FOUND);
+                }
+                $stack->setDrcId($direction);
             }
 
             if (isset($data['language_id'])) {
-                $stack->setLngId($data['language_id']);
+                $language = $this->languagesRepository->find($data['language_id']);
+                if (!$language) {
+                    return $this->json(['error' => 'Language not found'], JsonResponse::HTTP_NOT_FOUND);
+                }
+                $stack->setLngId($language);
             }
 
             $this->entityManager->flush();
@@ -214,8 +224,10 @@ class StacksController extends AbstractController
                 'direction_id' => $stack->getDrcId()?->getId(),
                 'language_id' => $stack->getLngId()?->getId()
             ]);
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
+            return $this->json(['error' => 'Technology with this title already exists'], JsonResponse::HTTP_CONFLICT);
         } catch (\Exception $e) {
-            return $this->json(['error' => 'Failed to update stack: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->json(['error' => 'Failed to update technology'], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
