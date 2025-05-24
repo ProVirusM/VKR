@@ -1,41 +1,3 @@
-<!--<template>-->
-<!--  <v-container>-->
-<!--    <v-card class="pa-6">-->
-<!--      <v-card-title class="text-h5">Личный кабинет</v-card-title>-->
-<!--      <v-card-text>-->
-<!--        Добро пожаловать, <strong>{{ user.name }}</strong>!-->
-<!--      </v-card-text>-->
-
-<!--      <v-btn color="error" @click="logout">Выйти</v-btn>-->
-<!--    </v-card>-->
-<!--  </v-container>-->
-<!--</template>-->
-
-<!--<script setup>-->
-<!--import { ref, onMounted } from 'vue'-->
-<!--import axios from 'axios'-->
-<!--import { useRouter } from 'vue-router'-->
-
-<!--const user = ref({})-->
-<!--const router = useRouter()-->
-
-<!--onMounted(async () => {-->
-<!--  try {-->
-<!--    const token = localStorage.getItem('token')-->
-<!--    const response = await axios.get('/api/profile', {-->
-<!--      headers: { Authorization: `Bearer ${token}` },-->
-<!--    })-->
-<!--    user.value = response.data-->
-<!--  } catch {-->
-<!--    router.push('/login')-->
-<!--  }-->
-<!--})-->
-
-<!--const logout = () => {-->
-<!--  localStorage.removeItem('token')-->
-<!--  router.push('/login')-->
-<!--}-->
-<!--</script>-->
 <template>
   <v-container class="py-8">
     <v-card elevation="10" rounded="xl" class="pa-6 bg-grey-lighten-5">
@@ -103,6 +65,30 @@
               </v-btn>
             </v-col>
           </template>
+
+          <!-- Администратор -->
+          <template v-if="user.roles.includes('admin')">
+            <v-col cols="12" md="4">
+              <v-btn block color="purple-darken-2" @click="goToLanguages" prepend-icon="mdi-code-braces">
+                Языки программирования
+              </v-btn>
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-btn block color="indigo-darken-2" @click="goToDirections" prepend-icon="mdi-arrow-decision">
+                Направления
+              </v-btn>
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-btn block color="blue-darken-2" @click="goToTechnologies" prepend-icon="mdi-cog">
+                Технологии
+              </v-btn>
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-btn block color="cyan-darken-2" @click="goToReports" prepend-icon="mdi-chart-bar">
+                Отчеты
+              </v-btn>
+            </v-col>
+          </template>
         </template>
       </v-row>
 
@@ -146,6 +132,12 @@ const goToActiveOrders = () => router.push('/customer/active-orders')
 const goToCompletedOrders = () => router.push('/customer/completed-orders')
 const goToMyProjects = () => router.push('/contractor/projects')
 const goToCreateProject = () => router.push('/contractor/create-project')
+
+// Новые функции для администратора
+const goToLanguages = () => router.push('/admin/languages')
+const goToDirections = () => router.push('/admin/directions')
+const goToTechnologies = () => router.push('/admin/technologies')
+const goToReports = () => router.push('/admin/reports')
 </script>
 
 

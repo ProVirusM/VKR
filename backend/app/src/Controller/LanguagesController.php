@@ -14,6 +14,11 @@ use App\Repository\StacksRepository;
 #[Route('/api/languages')] // Префикс /api для REST API
 class LanguagesController extends AbstractController
 {
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private LanguagesRepository $languagesRepository
+    ) {}
+
     /**
      * Получить список всех языков (GET /api/languages)
      */
@@ -41,12 +46,9 @@ class LanguagesController extends AbstractController
     }
 
     #[Route('/', name: 'languages_index', methods: ['GET'])]
-    public function index(LanguagesRepository $languagesRepository): JsonResponse
+    public function index(): JsonResponse
     {
-        // Получаем все языки
-        $languages = $languagesRepository->findAll();
-
-        // Преобразуем в JSON-формат
+        $languages = $this->languagesRepository->findAll();
         $data = [];
         foreach ($languages as $language) {
             $data[] = [
@@ -54,7 +56,6 @@ class LanguagesController extends AbstractController
                 'title' => $language->getLngTitle(),
             ];
         }
-
         return $this->json($data);
     }
 
@@ -62,23 +63,19 @@ class LanguagesController extends AbstractController
      * Создать новый язык (POST /api/languages)
      */
     #[Route('/', name: 'languages_new', methods: ['POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    public function new(Request $request): JsonResponse
     {
-        // Декодируем JSON
         $data = json_decode($request->getContent(), true);
-
-        // Проверяем, есть ли переданный параметр title
+        
         if (!isset($data['title'])) {
             return $this->json(['error' => 'Missing "title" field'], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        // Создаем новый объект
         $language = new Languages();
         $language->setLngTitle($data['title']);
 
-        // Сохраняем в базе данных
-        $entityManager->persist($language);
-        $entityManager->flush();
+        $this->entityManager->persist($language);
+        $this->entityManager->flush();
 
         return $this->json([
             'id' => $language->getId(),
@@ -100,40 +97,54 @@ class LanguagesController extends AbstractController
     }
 
     /**
-     * Обновить язык (PUT /api/languages/{lng_id})
+     * Обновить язык (PUT /api/languages/{id})
      */
-    #[Route('/{lng_id}', name: 'languages_edit', methods: ['PUT', 'PATCH'])]
-    #[ParamConverter('language', options: ['mapping' => ['lng_id' => 'lng_id']])]
-    public function edit(Request $request, Languages $language, EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/{id}', name: 'languages_edit', methods: ['PUT', 'PATCH'])]
+    public function edit(Request $request, int $id): JsonResponse
     {
-        // Декодируем JSON
-        $data = json_decode($request->getContent(), true);
+        $language = $this->languagesRepository->find($id);
+        
+        if (!$language) {
+            return $this->json(['error' => 'Language not found'], JsonResponse::HTTP_NOT_FOUND);
+        }
 
-        // Проверяем наличие поля title
+        $data = json_decode($request->getContent(), true);
+        
         if (!isset($data['title'])) {
             return $this->json(['error' => 'Missing "title" field'], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        // Обновляем данные
-        $language->setLngTitle($data['title']);
-        $entityManager->flush();
+        try {
+            $language->setLngTitle($data['title']);
+            $this->entityManager->flush();
 
-        return $this->json([
-            'id' => $language->getId(),
-            'title' => $language->getLngTitle(),
-        ]);
+            return $this->json([
+                'id' => $language->getId(),
+                'title' => $language->getLngTitle(),
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to update language: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
      * Удалить язык (DELETE /api/languages/{lng_id})
      */
-    #[Route('/{lng_id}', name: 'languages_delete', methods: ['DELETE'])]
-    #[ParamConverter('language', options: ['mapping' => ['lng_id' => 'lng_id']])]
-    public function delete(Languages $language, EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/{id}', name: 'languages_delete', methods: ['DELETE'])]
+    public function delete(int $id): JsonResponse
     {
-        $entityManager->remove($language);
-        $entityManager->flush();
+        $language = $this->languagesRepository->find($id);
+        
+        if (!$language) {
+            return $this->json(['error' => 'Language not found'], JsonResponse::HTTP_NOT_FOUND);
+        }
 
-        return $this->json(['message' => 'Language deleted successfully'], JsonResponse::HTTP_NO_CONTENT);
+        try {
+            $this->entityManager->remove($language);
+            $this->entityManager->flush();
+            return $this->json(null, JsonResponse::HTTP_NO_CONTENT);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to delete language: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }

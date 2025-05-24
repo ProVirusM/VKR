@@ -102,6 +102,31 @@ const router = createRouter({
       component: OrderFeedback,
       meta: { requiresAuth: true }
     },
+    // Admin routes
+    {
+      path: '/admin/languages',
+      name: 'admin-languages',
+      component: () => import('../views/admin/Languages.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/admin/directions',
+      name: 'admin-directions',
+      component: () => import('../views/admin/Directions.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/admin/technologies',
+      name: 'admin-technologies',
+      component: () => import('../views/admin/Technologies.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/admin/reports',
+      name: 'admin-reports',
+      component: () => import('../views/admin/Reports.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
   ],
 })
 
