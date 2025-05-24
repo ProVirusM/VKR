@@ -2,83 +2,110 @@
 
 namespace App\Controller;
 
+use App\Entity\ProjectsGitHub;
 use App\Repository\OrdersRepository;
-use App\Repository\ProjectsRepository;
-use App\Repository\UsersRepository;
+use App\Repository\ProjectsGitHubRepository;
+use App\Repository\UserRepository;
+use App\Repository\StacksRepository;
+use App\Repository\CustomersRepository;
+use App\Repository\ContractorsRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
+use Doctrine\ORM\EntityManagerInterface;
 
 #[Route('/api/reports')]
 class ReportsController extends AbstractController
 {
+    public function __construct(
+        private OrdersRepository $ordersRepository,
+        private ProjectsGitHubRepository $projectsRepository,
+        private UserRepository $usersRepository,
+        private StacksRepository $stacksRepository,
+        private CustomersRepository $customersRepository,
+        private ContractorsRepository $contractorsRepository,
+        private EntityManagerInterface $entityManager
+    ) {}
+
     #[Route('/dashboard', name: 'reports_dashboard', methods: ['GET'])]
-    public function getDashboardStats(
-        OrdersRepository $ordersRepository,
-        ProjectsRepository $projectsRepository,
-        UsersRepository $usersRepository
-    ): JsonResponse {
-        // Получаем статистику по заказам
-        $totalOrders = $ordersRepository->count([]);
-        $activeOrders = $ordersRepository->count(['status' => 'active']);
-        $completedOrders = $ordersRepository->count(['status' => 'completed']);
+    public function getDashboardStats(): JsonResponse
+    {
+        try {
+            // Получаем статистику по заказам
+            $totalOrders = $this->ordersRepository->count([]);
+            $activeOrders = $this->ordersRepository->count(['ord_status' => 'Новый']);
+            $completedOrders = $this->ordersRepository->count(['ord_status' => 'Завершен']);
 
-        // Получаем статистику по проектам
-        $totalProjects = $projectsRepository->count([]);
+            // Получаем статистику по проектам
+            $totalProjects = $this->projectsRepository->count([]);
 
-        // Получаем статистику по пользователям
-        $totalUsers = $usersRepository->count([]);
-        $totalContractors = $usersRepository->count(['roles' => ['ROLE_CONTRACTOR']]);
-        $totalCustomers = $usersRepository->count(['roles' => ['ROLE_CUSTOMER']]);
+            // Получаем статистику по пользователям
+            $totalUsers = $this->usersRepository->count([]);
+            $totalContractors = $this->contractorsRepository->count([]);
+            $totalCustomers = $this->customersRepository->count([]);
 
-        return $this->json([
-            'orders' => [
-                'total' => $totalOrders,
-                'active' => $activeOrders,
-                'completed' => $completedOrders,
-            ],
-            'projects' => [
-                'total' => $totalProjects,
-            ],
-            'users' => [
-                'total' => $totalUsers,
-                'contractors' => $totalContractors,
-                'customers' => $totalCustomers,
-            ],
-        ]);
+            return $this->json([
+                'orders' => [
+                    'total' => $totalOrders,
+                    'active' => $activeOrders,
+                    'completed' => $completedOrders,
+                ],
+                'projects' => [
+                    'total' => $totalProjects,
+                ],
+                'users' => [
+                    'total' => $totalUsers,
+                    'contractors' => $totalContractors,
+                    'customers' => $totalCustomers,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to fetch dashboard stats: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     #[Route('/orders-by-status', name: 'reports_orders_by_status', methods: ['GET'])]
-    public function getOrdersByStatus(OrdersRepository $ordersRepository): JsonResponse
+    public function getOrdersByStatus(): JsonResponse
     {
-        $orders = $ordersRepository->findAll();
-        $statusCounts = [];
+        try {
+            $orders = $this->ordersRepository->findAll();
+            $statusCounts = [];
 
-        foreach ($orders as $order) {
-            $status = $order->getStatus();
-            if (!isset($statusCounts[$status])) {
-                $statusCounts[$status] = 0;
+            foreach ($orders as $order) {
+                $status = $order->getOrdStatus();
+                if (!isset($statusCounts[$status])) {
+                    $statusCounts[$status] = 0;
+                }
+                $statusCounts[$status]++;
             }
-            $statusCounts[$status]++;
-        }
 
-        return $this->json($statusCounts);
+            return $this->json($statusCounts);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to fetch orders by status: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     #[Route('/projects-by-direction', name: 'reports_projects_by_direction', methods: ['GET'])]
-    public function getProjectsByDirection(ProjectsRepository $projectsRepository): JsonResponse
+    public function getProjectsByDirection(): JsonResponse
     {
-        $projects = $projectsRepository->findAll();
-        $directionCounts = [];
+        try {
+            $stacks = $this->stacksRepository->findAll();
+            $directionCounts = [];
 
-        foreach ($projects as $project) {
-            $direction = $project->getDirection()->getDrcTitle();
-            if (!isset($directionCounts[$direction])) {
-                $directionCounts[$direction] = 0;
+            foreach ($stacks as $stack) {
+                $direction = $stack->getDrcId();
+                if ($direction) {
+                    $directionTitle = $direction->getDrcTitle();
+                    if (!isset($directionCounts[$directionTitle])) {
+                        $directionCounts[$directionTitle] = 0;
+                    }
+                    $directionCounts[$directionTitle]++;
+                }
             }
-            $directionCounts[$direction]++;
-        }
 
-        return $this->json($directionCounts);
+            return $this->json($directionCounts);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to fetch projects by direction: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }
