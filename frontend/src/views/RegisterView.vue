@@ -10,6 +10,34 @@
         <v-text-field v-model="email" label="Email" type="email" required />
         <v-text-field v-model="password" label="Пароль" type="password" required />
 
+        <v-radio-group v-model="selectedRole" class="mt-4">
+          <template v-slot:label>
+            <div class="text-subtitle-1 font-weight-bold">Выберите роль:</div>
+          </template>
+          <v-radio
+            value="customer"
+            color="primary"
+          >
+            <template v-slot:label>
+              <div class="d-flex align-center">
+                <v-icon color="primary" class="mr-2">mdi-account</v-icon>
+                Заказчик
+              </div>
+            </template>
+          </v-radio>
+          <v-radio
+            value="contractor"
+            color="primary"
+          >
+            <template v-slot:label>
+              <div class="d-flex align-center">
+                <v-icon color="primary" class="mr-2">mdi-briefcase</v-icon>
+                Исполнитель
+              </div>
+            </template>
+          </v-radio>
+        </v-radio-group>
+
         <v-alert v-if="error" type="error" class="mt-3">{{ error }}</v-alert>
 
         <v-btn type="submit" color="success" class="mt-4" block :loading="loading" :disabled="loading">
@@ -33,6 +61,7 @@ const email = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+const selectedRole = ref('customer')
 const router = useRouter()
 
 const register = async () => {
@@ -48,7 +77,7 @@ const register = async () => {
       usr_patronymic: usrPatronymic.value,
       email: email.value,
       password: password.value,
-      role: 'customer'
+      role: selectedRole.value
     })
     console.log('Регистрация успешна:', registerResponse.data)
 
