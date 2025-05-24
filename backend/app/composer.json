@@ -25,7 +25,8 @@
         "symfony/property-access": "7.1.*",
         "symfony/runtime": "7.1.*",
         "symfony/serializer": "7.1.*",
-        "symfony/yaml": "7.1.*"
+        "symfony/yaml": "7.1.*",
+        "tecnickcom/tcpdf": "^6.9"
     },
     "config": {
         "allow-plugins": {

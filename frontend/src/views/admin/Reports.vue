@@ -1,9 +1,37 @@
 <template>
   <v-container>
     <v-card class="pa-6">
-      <v-card-title class="text-h5 mb-4">
-        Отчеты
+      <v-card-title class="text-h5 mb-4 d-flex justify-space-between align-center">
+        <span>Отчеты</span>
       </v-card-title>
+
+      <!-- Кнопки отчетов -->
+      <v-row class="mb-4">
+        <v-col cols="12" sm="6" md="6">
+          <v-btn color="primary" @click="generatePDF('contractors')" block>
+            <v-icon start>mdi-file-pdf-box</v-icon>
+            Отчет по исполнителям
+          </v-btn>
+        </v-col>
+        <v-col cols="12" sm="6" md="6">
+          <v-btn color="primary" @click="generatePDF('active-orders')" block>
+            <v-icon start>mdi-file-pdf-box</v-icon>
+            Отчет по активным заказам
+          </v-btn>
+        </v-col>
+        <v-col cols="12" sm="6" md="6">
+          <v-btn color="primary" @click="generatePDF('completed-orders')" block>
+            <v-icon start>mdi-file-pdf-box</v-icon>
+            Отчет по выполненным заказам
+          </v-btn>
+        </v-col>
+        <v-col cols="12" sm="6" md="6">
+          <v-btn color="primary" @click="generatePDF('customers')" block>
+            <v-icon start>mdi-file-pdf-box</v-icon>
+            Отчет по заказчикам
+          </v-btn>
+        </v-col>
+      </v-row>
 
       <!-- Общая статистика -->
       <v-row class="mb-6">
@@ -156,6 +184,25 @@ const fetchProjectsByDirection = async () => {
     })
   } catch (error) {
     console.error('Error fetching projects by direction:', error)
+  }
+}
+
+const generatePDF = async (type) => {
+  try {
+    const response = await axios.get(`/api/reports/generate-pdf/${type}`, {
+      responseType: 'blob'
+    })
+    
+    // Создаем ссылку для скачивания
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `${type}_report.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } catch (error) {
+    console.error('Error generating PDF:', error)
   }
 }
 
