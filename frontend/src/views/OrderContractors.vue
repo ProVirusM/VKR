@@ -9,6 +9,14 @@
       </v-col>
     </v-row>
 
+    <v-row v-if="contractors.length">
+      <v-col cols="12" class="mb-4 text-right">
+        <v-btn color="primary" @click="toggleSortOrder">
+          Отсортировать по рейтингу {{ sortOrder === 'desc' ? '↓' : '↑' }}
+        </v-btn>
+      </v-col>
+    </v-row>
+
     <div v-if="contractors.length" class="contractors-list">
       <v-row>
         <v-col v-for="contractor in contractors" :key="contractor.contractorId" cols="12" class="mb-6">
@@ -35,6 +43,9 @@
               <v-card-title class="text-h5 font-weight-bold">
                 {{ contractor.userSurname }} {{ contractor.userName }} {{ contractor.userPatronymic }}
               </v-card-title>
+              <v-card-subtitle v-if="contractor.rating !== null">
+                Рейтинг: {{ contractor.rating }}
+              </v-card-subtitle>
             </v-card-item>
 
             <v-card-text>
@@ -134,6 +145,19 @@ const route = useRoute()
 const orderId = route.params.id
 const loading = ref(false)
 
+const sortOrder = ref('desc')
+
+const toggleSortOrder = () => {
+  sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
+  contractors.value.sort((a, b) => {
+    if (sortOrder.value === 'desc') {
+      return (b.rating ?? 0) - (a.rating ?? 0)
+    } else {
+      return (a.rating ?? 0) - (b.rating ?? 0)
+    }
+  })
+}
+
 const snackbar = ref({
   show: false,
   text: '',
@@ -181,7 +205,8 @@ const loadContractors = async () => {
   loading.value = true
   const token = localStorage.getItem('token')
   try {
-    const res = await axios.get(`/api/orders/${orderId}/contractors`, {
+    // Используем новый API с рейтингом
+    const res = await axios.get(`/api/orders/${orderId}/contractors-with-rating`, {
       headers: { Authorization: `Bearer ${token}` }
     })
     contractors.value = res.data

@@ -375,4 +375,58 @@ class OrdersController extends AbstractController
             ], 500);
         }
     }
+
+    #[Route('/{id}/contractors-with-rating', name: 'api_order_contractors_with_rating', methods: ['GET'])]
+    public function getContractorsWithRating(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $order = $em->getRepository(Orders::class)->find($id);
+        if (!$order) {
+            return $this->json(['error' => 'Order not found'], 404);
+        }
+
+        $result = [];
+        $Tmax = new \DateTime(); // Текущая дата
+        $lambda = 0.01; // Коэффициент затухания
+
+        foreach ($order->getOrdersContractors() as $orderContractor) {
+            $contractor = $orderContractor->getCntId();
+            $user = $contractor->getUsrId();
+
+            // Собираем отзывы
+            $feedbacks = $contractor->getFeedbacks();
+            $ratings = [];
+            $weights = [];
+            foreach ($feedbacks as $feedback) {
+                $score = $feedback->getFdbEstimation();
+                $Tq = $feedback->getFdbTimestamp();
+                if ($score !== null && $Tq !== null) {
+                    // Разница в днях между Tmax и Tq
+                    $days = $Tmax->diff($Tq)->days;
+                    // w(T_q) = exp(-lambda * (Tmax - Tq))
+                    $w = exp(-$lambda * $days);
+                    $ratings[] = $score * $w;
+                    $weights[] = $w;
+                }
+            }
+            $weightedRating = null;
+            if (count($weights) > 0 && array_sum($weights) > 0) {
+                $weightedRating = array_sum($ratings) / array_sum($weights);
+            }
+
+            $result[] = [
+                'contractorId' => $contractor->getId(),
+                'userName' => $user ? $user->getUsrName() : null,
+                'userSurname' => $user ? $user->getUsrSurname() : null,
+                'userPatronymic' => $user ? $user->getUsrPatronymic() : null,
+                'rating' => $weightedRating !== null ? round($weightedRating, 2) : null
+            ];
+        }
+
+        // Сортировка: только по рейтингу (desc)
+        usort($result, function($a, $b) {
+            return ($b['rating'] ?? 0) <=> ($a['rating'] ?? 0);
+        });
+
+        return $this->json($result);
+    }
 }
