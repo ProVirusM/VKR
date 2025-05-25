@@ -1,10 +1,12 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import axios from 'axios'
 
 const router = useRouter()
 const auth = useAuthStore()
+const user = ref({})
 
 const handleLogout = () => {
   auth.logout()
@@ -19,8 +21,34 @@ const goToDashboard = () => {
   router.push('/dashboard')
 }
 
+const goToChats = () => {
+  router.push({ name: 'chats' })
+}
+
 const isContractor = computed(() => {
-  return auth.isAuthenticated && auth.user && Array.isArray(auth.user.roles) && auth.user.roles.includes('contractor')
+  return Array.isArray(user.value.roles) && user.value.roles.includes('contractor')
+})
+
+const isCustomer = computed(() => {
+  return Array.isArray(user.value.roles) && user.value.roles.includes('customer')
+})
+
+const showChats = computed(() => {
+  return isContractor.value || isCustomer.value
+})
+
+onMounted(async () => {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    const response = await axios.get('/api/profile', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    user.value = response.data
+  } catch (err) {
+    console.error('Ошибка при загрузке данных пользователя:', err)
+  }
 })
 
 </script>
@@ -36,6 +64,15 @@ const isContractor = computed(() => {
 <!--      <RouterLink v-if="Array.isArray(user.roles) && user.roles.includes('contractor')" to="/customer/orders">Заказы</RouterLink>-->
 
       <template v-if="auth.isAuthenticated">
+        <v-btn
+          v-if="showChats"
+          color="info"
+          class="navbar-btn"
+          @click="goToChats"
+          prepend-icon="mdi-message-text"
+        >
+          Чаты
+        </v-btn>
         <v-btn color="primary" class="navbar-btn" @click="goToDashboard">Профиль</v-btn>
         <v-btn color="error" class="navbar-btn" @click="handleLogout">Выйти</v-btn>
       </template>

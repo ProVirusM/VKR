@@ -54,11 +54,8 @@ class Orders
     #[ORM\OneToMany(targetEntity: OrdersStacks::class, mappedBy: 'ord_id', cascade: ['persist'], orphanRemoval: true)]
     private Collection $ordersStacks;
 
-    /**
-     * @var Collection<int, Chats>
-     */
-    #[ORM\OneToMany(targetEntity: Chats::class, mappedBy: 'ord_id', orphanRemoval: true)]
-    private Collection $chats;
+
+
 
     #[ORM\ManyToOne(inversedBy: 'orders')]
     #[ORM\JoinColumn(nullable: false)]
@@ -68,7 +65,7 @@ class Orders
     {
         $this->ordersContractors = new ArrayCollection();
         $this->ordersStacks = new ArrayCollection();
-        $this->chats = new ArrayCollection();
+        //$this->chats = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -210,35 +207,7 @@ class Orders
         return $this;
     }
 
-    /**
-     * @return Collection<int, Chats>
-     */
-    public function getChats(): Collection
-    {
-        return $this->chats;
-    }
 
-    public function addChat(Chats $chat): static
-    {
-        if (!$this->chats->contains($chat)) {
-            $this->chats->add($chat);
-            $chat->setOrdId($this);
-        }
-
-        return $this;
-    }
-
-    public function removeChat(Chats $chat): static
-    {
-        if ($this->chats->removeElement($chat)) {
-            // set the owning side to null (unless already changed)
-            if ($chat->getOrdId() === $this) {
-                $chat->setOrdId(null);
-            }
-        }
-
-        return $this;
-    }
 
     public function getCstId(): ?Customers
     {

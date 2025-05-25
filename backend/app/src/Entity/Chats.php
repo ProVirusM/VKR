@@ -24,9 +24,7 @@ class Chats
     #[ORM\JoinColumn(nullable: false)]
     private ?Contractors $cnt_id = null;
 
-    #[ORM\ManyToOne(inversedBy: 'chats')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?Orders $ord_id = null;
+
 
     /**
      * @var Collection<int, Messages>
@@ -80,17 +78,7 @@ class Chats
         return $this;
     }
 
-    public function getOrdId(): ?Orders
-    {
-        return $this->ord_id;
-    }
 
-    public function setOrdId(?Orders $ord_id): static
-    {
-        $this->ord_id = $ord_id;
-
-        return $this;
-    }
 
     /**
      * @return Collection<int, Messages>

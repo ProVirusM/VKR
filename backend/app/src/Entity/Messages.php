@@ -22,11 +22,11 @@ class Messages
     private ?Chats $chat_id = null;
 
     #[ORM\ManyToOne(inversedBy: 'messages')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Contractors $cnt_id = null;
 
     #[ORM\ManyToOne(inversedBy: 'messages')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Customers $cst_id = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]

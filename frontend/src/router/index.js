@@ -19,6 +19,8 @@ import ProjectDetails from '../views/ProjectDetails.vue'
 import ProjectAnalysis from '../views/ProjectAnalysis.vue'
 import OrderFeedback from '../views/OrderFeedback.vue'
 import EditProject from '@/views/EditProject.vue'
+import Chat from '../views/Chat.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -109,6 +111,18 @@ const router = createRouter({
       component: EditProject,
       meta: { requiresAuth: true }
     },
+    {
+      path: '/chat/:id',
+      name: 'chat',
+      component: Chat,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/chats',
+      name: 'chats',
+      component: () => import('@/views/Chats.vue'),
+      meta: { requiresAuth: true }
+    },
     // Admin routes
     {
       path: '/admin/languages',
@@ -135,6 +149,17 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true }
     },
   ],
+})
+
+// Навигационный guard
+router.beforeEach((to, from, next) => {
+  const auth = useAuthStore()
+  
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    next('/login')
+  } else {
+    next()
+  }
 })
 
 export default router

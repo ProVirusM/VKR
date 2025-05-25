@@ -24,6 +24,15 @@
               <v-card-text class="text-body-1 mt-2">
                 {{ contractor?.description || 'Нет описания' }}
               </v-card-text>
+              <v-card-actions>
+                <v-btn
+                  :color="existingChat ? 'primary' : 'success'"
+                  :prepend-icon="existingChat ? 'mdi-chat' : 'mdi-chat-plus'"
+                  @click="handleChat"
+                >
+                  {{ existingChat ? 'Открыть чат' : 'Начать чат' }}
+                </v-btn>
+              </v-card-actions>
             </v-col>
           </v-row>
         </v-card>
@@ -151,6 +160,7 @@ const router = useRouter()
 const contractor = ref(null)
 const snackbar = ref({ show: false, text: '', color: 'success' })
 const feedbackSort = ref('highToLow')
+const existingChat = ref(false)
 
 const feedbackSortOptions = [
   { title: 'Сначала с высокой оценкой', value: 'highToLow' },
@@ -180,9 +190,36 @@ const sortedFeedbacks = computed(() => {
 
 const loadContractor = async () => {
   try {
-    const res = await axios.get(`/api/contractors/${route.params.id}/full-profile`)
+    const res = await axios.get(`/api/contractors/${route.params.id}/full-profile`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
     contractor.value = res.data
+    console.log('Contractor data:', contractor.value)
+    // Check if chat exists
+    const chatRes = await axios.get(`/api/chats/check/${contractor.value.id}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    console.log('Raw chat check response:', chatRes)
+    console.log('Chat check response data:', chatRes.data)
+    
+    // Проверяем, что chatId существует и является числом
+    if (chatRes.data.exists && chatRes.data.chatId) {
+      const chatId = Number(chatRes.data.chatId)
+      if (!isNaN(chatId)) {
+        existingChat.value = chatId
+      } else {
+        existingChat.value = false
+      }
+    } else {
+      existingChat.value = false
+    }
+    console.log('Final existingChat value:', existingChat.value)
   } catch (e) {
+    console.error('Error details:', e.response?.data || e)
     snackbar.value = { show: true, text: 'Ошибка загрузки профиля', color: 'error' }
   }
 }
@@ -193,6 +230,41 @@ const goToProject = (projectId) => {
 
 const goToOrder = (orderId) => {
   router.push(`/contractor/orders/${orderId}`)
+}
+
+const handleChat = async () => {
+  try {
+    console.log('Handle chat - existingChat value:', existingChat.value)
+    
+    // Проверяем, что existingChat.value является числом
+    if (typeof existingChat.value === 'number' && !isNaN(existingChat.value)) {
+      console.log('Navigating to existing chat:', existingChat.value)
+      router.push(`/chat/${existingChat.value}`)
+    } else {
+      console.log('Creating new chat for contractor:', contractor.value.id)
+      const res = await axios.post('/api/chats/create', 
+        { contractorId: contractor.value.id },
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      )
+      console.log('New chat response:', res)
+      
+      // Проверяем, что ID нового чата является числом
+      const newChatId = Number(res.data.id)
+      if (!isNaN(newChatId)) {
+        console.log('Navigating to new chat:', newChatId)
+        router.push(`/chat/${newChatId}`)
+      } else {
+        throw new Error('Invalid new chat ID')
+      }
+    }
+  } catch (e) {
+    console.error('Error details:', e.response?.data || e)
+    snackbar.value = { show: true, text: 'Ошибка при создании чата', color: 'error' }
+  }
 }
 
 onMounted(loadContractor)
