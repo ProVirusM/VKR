@@ -38,6 +38,18 @@
           </v-radio>
         </v-radio-group>
 
+        <!-- Поле для описания исполнителя -->
+        <v-textarea
+          v-if="selectedRole === 'contractor'"
+          v-model="description"
+          label="Опишите себя и свой опыт"
+          rows="4"
+          auto-grow
+          class="mt-4"
+          :rules="[v => !v || v.length <= 1000 || 'Описание не должно превышать 1000 символов']"
+          counter
+        ></v-textarea>
+
         <v-alert v-if="error" type="error" class="mt-3">{{ error }}</v-alert>
 
         <v-btn type="submit" color="success" class="mt-4" block :loading="loading" :disabled="loading">
@@ -59,6 +71,7 @@ const usrSurname = ref('')
 const usrPatronymic = ref('')
 const email = ref('')
 const password = ref('')
+const description = ref('')
 const error = ref('')
 const loading = ref(false)
 const selectedRole = ref('customer')
@@ -77,7 +90,8 @@ const register = async () => {
       usr_patronymic: usrPatronymic.value,
       email: email.value,
       password: password.value,
-      role: selectedRole.value
+      role: selectedRole.value,
+      description: selectedRole.value === 'contractor' ? description.value : undefined
     })
     console.log('Регистрация успешна:', registerResponse.data)
 
@@ -89,12 +103,14 @@ const register = async () => {
     })
     console.log('Вход успешен:', loginResponse.data)
 
-    // Сохраняем токен
+    // Сохраняем токен и данные пользователя
     const token = loginResponse.data.token
     console.log('Токен получен:', token)
     localStorage.setItem('token', token)
-    localStorage.setItem('name', loginResponse.data.name)
-    localStorage.setItem('email', loginResponse.data.email)
+    localStorage.setItem('name', registerResponse.data.user.name)
+    localStorage.setItem('surname', registerResponse.data.user.surname)
+    localStorage.setItem('email', registerResponse.data.user.email)
+    localStorage.setItem('roles', JSON.stringify(registerResponse.data.user.roles))
 
     // Перенаправляем в дашборд
     console.log('Перенаправление на /dashboard')
@@ -104,7 +120,12 @@ const register = async () => {
     if (err.response?.data?.message) {
       error.value = err.response.data.message
     } else if (err.response?.data?.error) {
-      error.value = err.response.data.error
+      // Преобразуем сообщения об ошибках на русский язык
+      const errorMessages = {
+        'User with this email already exists': 'Пользователь с таким email уже существует',
+        'Missing required fields': 'Не все обязательные поля заполнены'
+      }
+      error.value = errorMessages[err.response.data.error] || err.response.data.error
     } else {
       error.value = 'Произошла ошибка при регистрации'
     }

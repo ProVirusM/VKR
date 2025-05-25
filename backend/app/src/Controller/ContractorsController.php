@@ -8,7 +8,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 
 #[Route('/api/contractors')]
@@ -66,12 +68,66 @@ class ContractorsController extends AbstractController
     }
 
     /**
+     * Получить информацию о текущем исполнителе (GET /api/contractors/me)
+     */
+    #[Route('/me', name: 'contractors_me', methods: ['GET'])]
+    //#[IsGranted('contractor')]
+    public function me(): JsonResponse
+    {
+        $user = $this->getUser();
+        $contractor = $user->getContractors();
+
+        if (!$contractor) {
+            return $this->json(['error' => 'Contractor not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json([
+            'id' => $contractor->getId(),
+            'description' => $contractor->getCntText()
+        ]);
+    }
+
+    /**
+     * Обновить описание текущего исполнителя (PUT /api/contractors/me)
+     */
+    #[Route('/me', name: 'contractors_update_me', methods: ['PUT'])]
+    //#[IsGranted('contractor')]
+    public function updateMe(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $user = $this->getUser();
+        $contractor = $user->getContractors();
+
+        if (!$contractor) {
+            return $this->json(['error' => 'Contractor not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['text'])) {
+            return $this->json(['error' => 'Missing "text" field'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $contractor->setCntText($data['text']);
+        $entityManager->flush();
+
+        return $this->json([
+            'id' => $contractor->getId(),
+            'description' => $contractor->getCntText()
+        ]);
+    }
+
+    /**
      * Получить подрядчика по ID (GET /api/contractors/{cnt_id})
      */
     #[Route('/{cnt_id}', name: 'contractors_show', methods: ['GET'])]
-    #[ParamConverter('contractor', options: ['mapping' => ['cnt_id' => 'id']])]
-    public function show(Contractors $contractor): JsonResponse
+    public function show(int $cnt_id, ContractorsRepository $contractorsRepository): JsonResponse
     {
+        $contractor = $contractorsRepository->find($cnt_id);
+        
+        if (!$contractor) {
+            return $this->json(['error' => 'Contractor not found'], Response::HTTP_NOT_FOUND);
+        }
+
         return $this->json($this->serializeContractor($contractor));
     }
 

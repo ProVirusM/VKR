@@ -8,6 +8,8 @@ namespace App\Controller;
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Entity\Customers;
+use App\Entity\Contractors;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -101,13 +103,13 @@ class UserController extends AbstractController
 
         // Валидируем поля
         if (!isset($data['usr_name'], $data['usr_surname'], $data['usr_patronymic'], $data['email'], $data['password'], $data['role'])) {
-            return new JsonResponse(['error' => 'Missing required fields'], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(['error' => 'Не все обязательные поля заполнены'], Response::HTTP_BAD_REQUEST);
         }
 
         // Проверяем, существует ли пользователь с таким email
         $existingUser = $entityManager->getRepository(User::class)->findOneBy(['email' => $data['email']]);
         if ($existingUser) {
-            return new JsonResponse(['error' => 'User with this email already exists'], Response::HTTP_CONFLICT);
+            return new JsonResponse(['error' => 'Пользователь с таким email уже существует'], Response::HTTP_CONFLICT);
         }
 
         // Создаем нового пользователя
@@ -128,6 +130,30 @@ class UserController extends AbstractController
         $entityManager->persist($user);
         $entityManager->flush();
 
-        return new JsonResponse(['message' => 'User registered successfully'], Response::HTTP_CREATED);
+        // Создаем соответствующую запись в зависимости от роли
+        if ($data['role'] === 'customer') {
+            $customer = new Customers();
+            $customer->setUsrId($user);
+            $entityManager->persist($customer);
+        } elseif ($data['role'] === 'contractor') {
+            $contractor = new Contractors();
+            $contractor->setUsrId($user);
+            // Устанавливаем описание из запроса или пустую строку
+            $contractor->setCntText($data['description'] ?? '');
+            $entityManager->persist($contractor);
+        }
+
+        $entityManager->flush();
+
+        return new JsonResponse([
+            'message' => 'User registered successfully',
+            'user' => [
+                'id' => $user->getId(),
+                'name' => $user->getUsrName(),
+                'surname' => $user->getUsrSurname(),
+                'email' => $user->getEmail(),
+                'roles' => $user->getRoles()
+            ]
+        ], Response::HTTP_CREATED);
     }
 }

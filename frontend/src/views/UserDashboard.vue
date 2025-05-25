@@ -14,6 +14,53 @@
         </v-col>
       </v-row>
 
+      <!-- Описание исполнителя -->
+      <template v-if="Array.isArray(user.roles) && user.roles.includes('contractor')">
+        <v-card class="mb-6 pa-4" variant="outlined">
+          <div class="d-flex justify-space-between align-center mb-2">
+            <div class="text-h6">О себе</div>
+            <v-btn
+              v-if="!isEditing"
+              icon="mdi-pencil"
+              variant="text"
+              @click="startEditing"
+            ></v-btn>
+          </div>
+
+          <div v-if="!isEditing" class="text-body-1">
+            {{ contractorDescription || 'Нет описания' }}
+          </div>
+
+          <v-form v-else @submit.prevent="saveDescription">
+            <v-textarea
+              v-model="editedDescription"
+              label="Опишите себя и свой опыт"
+              rows="4"
+              auto-grow
+              hide-details
+              class="mb-2"
+            ></v-textarea>
+            <div class="d-flex justify-end">
+              <v-btn
+                color="error"
+                variant="text"
+                class="mr-2"
+                @click="cancelEditing"
+              >
+                Отмена
+              </v-btn>
+              <v-btn
+                color="primary"
+                type="submit"
+                :loading="isSaving"
+              >
+                Сохранить
+              </v-btn>
+            </div>
+          </v-form>
+        </v-card>
+      </template>
+
       <v-divider class="my-6" />
 
       <v-row dense justify="center">
@@ -95,6 +142,24 @@
       <!-- Переместили кнопку "Выйти" вниз -->
       <v-divider class="my-6" />
     </v-card>
+
+    <!-- Snackbar для уведомлений -->
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      :timeout="3000"
+      location="top"
+    >
+      {{ snackbar.text }}
+      <template v-slot:actions>
+        <v-btn
+          variant="text"
+          @click="snackbar.show = false"
+        >
+          Закрыть
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-container>
 </template>
 
@@ -105,18 +170,90 @@ import { useRouter } from 'vue-router'
 
 const user = ref({})
 const router = useRouter()
+const contractorDescription = ref('')
+const isEditing = ref(false)
+const editedDescription = ref('')
+const isSaving = ref(false)
+
+// Состояние для Snackbar
+const snackbar = ref({
+  show: false,
+  text: '',
+  color: 'success'
+})
+
+// Функция для показа уведомлений
+const showNotification = (text, color = 'success') => {
+  snackbar.value = {
+    show: true,
+    text,
+    color
+  }
+}
 
 onMounted(async () => {
   try {
     const token = localStorage.getItem('token')
-    const response = await axios.get('/api/profile', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    user.value = response.data
-  } catch {
-    router.push('/login')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    const [userRes, contractorRes] = await Promise.all([
+      axios.get('/api/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      }),
+      axios.get('/api/contractors/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(err => {
+        console.error('Ошибка при загрузке данных исполнителя:', err)
+        return { data: { description: '' } }
+      })
+    ])
+
+    user.value = userRes.data
+    if (userRes.data.roles.includes('contractor')) {
+      contractorDescription.value = contractorRes.data.description || ''
+    }
+  } catch (err) {
+    console.error('Ошибка при загрузке данных:', err)
+    if (err.response?.status === 401) {
+      router.push('/login')
+    }
   }
 })
+
+const startEditing = () => {
+  editedDescription.value = contractorDescription.value
+  isEditing.value = true
+}
+
+const cancelEditing = () => {
+  isEditing.value = false
+  editedDescription.value = ''
+}
+
+const saveDescription = async () => {
+  try {
+    isSaving.value = true
+    const token = localStorage.getItem('token')
+
+    await axios.put('/api/contractors/me', {
+      text: editedDescription.value
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    contractorDescription.value = editedDescription.value
+    isEditing.value = false
+    showNotification('Описание успешно обновлено')
+  } catch (err) {
+    console.error('Ошибка при сохранении описания:', err)
+    showNotification('Ошибка при сохранении описания', 'error')
+  } finally {
+    isSaving.value = false
+  }
+}
 
 const logout = () => {
   localStorage.removeItem('token')
