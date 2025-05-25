@@ -16,6 +16,7 @@
             :href="project.repository"
             target="_blank"
             prepend-icon="mdi-github"
+            :disabled="!project.repository"
           >
             Репозиторий
           </v-btn>
@@ -23,11 +24,23 @@
             color="info"
             @click="$router.push(`/projects/${project.id}/analysis`)"
             prepend-icon="mdi-chart-bar"
+            :disabled="!project.repository"
+            :title="!project.repository ? 'Для анализа необходим репозиторий GitHub' : 'Анализ репозитория'"
           >
             Анализ
           </v-btn>
         </div>
       </v-card-title>
+
+      <v-alert
+        v-if="route.query.error"
+        type="error"
+        class="mb-4"
+        closable
+        @click:close="clearError"
+      >
+        {{ route.query.error }}
+      </v-alert>
 
       <v-card-text>
         <div class="mb-4">
@@ -63,6 +76,23 @@
 
       <v-card-actions class="d-flex justify-space-between">
         <v-btn color="grey" variant="outlined" @click="$router.back()">Назад</v-btn>
+        <div v-if="isContractor">
+          <v-btn
+            color="error"
+            variant="outlined"
+            class="me-2"
+            @click="confirmDelete"
+            :loading="isDeleting"
+          >
+            Удалить
+          </v-btn>
+          <v-btn
+            color="primary"
+            @click="$router.push(`/projects/${project.id}/edit`)"
+          >
+            Редактировать
+          </v-btn>
+        </div>
       </v-card-actions>
     </v-card>
 
@@ -70,6 +100,25 @@
       <v-progress-circular indeterminate color="primary" size="50" />
       <p class="mt-3">Загрузка проекта...</p>
     </div>
+
+    <!-- Диалог подтверждения удаления -->
+    <v-dialog v-model="deleteDialog" max-width="400">
+      <v-card>
+        <v-card-title class="text-h5">Подтверждение удаления</v-card-title>
+        <v-card-text>
+          Вы уверены, что хотите удалить проект "{{ project?.name }}"?
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey" variant="text" @click="deleteDialog = false">
+            Отмена
+          </v-btn>
+          <v-btn color="error" variant="text" @click="deleteProject" :loading="isDeleting">
+            Удалить
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Диалог для просмотра изображения -->
     <v-dialog v-model="dialog" max-width="90vw">
@@ -85,7 +134,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 
@@ -97,6 +146,11 @@ const isLoading = ref(true)
 const error = ref(null)
 const dialog = ref(false)
 const selectedImage = ref('')
+const deleteDialog = ref(false)
+const isDeleting = ref(false)
+const user = ref({})
+
+const isContractor = computed(() => Array.isArray(user.value.roles) && user.value.roles.includes('contractor'))
 
 // Получаем токен безопасным способом
 const token = ref('')
@@ -117,6 +171,12 @@ const loadData = async () => {
     })
 
     project.value = response.data
+
+    // Получаем информацию о пользователе
+    const userResponse = await axios.get('/api/profile', {
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    user.value = userResponse.data
   } catch (err) {
     error.value = err.response?.data?.message || err.message
     console.error('Ошибка:', err)
@@ -128,9 +188,33 @@ const loadData = async () => {
   }
 }
 
+const confirmDelete = () => {
+  deleteDialog.value = true
+}
+
+const deleteProject = async () => {
+  isDeleting.value = true
+  try {
+    await axios.delete(`/api/projects/${project.value.id}`, {
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    router.push('/contractor/projects')
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Ошибка при удалении проекта'
+    console.error('Ошибка:', err)
+  } finally {
+    isDeleting.value = false
+    deleteDialog.value = false
+  }
+}
+
 const openImage = (imageUrl) => {
   selectedImage.value = imageUrl
   dialog.value = true
+}
+
+const clearError = () => {
+  router.replace({ query: {} })
 }
 </script>
 

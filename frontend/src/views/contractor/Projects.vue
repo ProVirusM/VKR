@@ -10,12 +10,19 @@
         <v-row v-if="projects.length">
           <v-col v-for="project in projects" :key="project.id" cols="12" md="6">
             <v-card variant="outlined" class="h-100">
-              <v-img
+              <v-carousel
                 v-if="project.photos && project.photos.length"
-                :src="project.photos[0].link"
+                hide-delimiter-background
+                show-arrows="hover"
                 height="200"
-                cover
-              ></v-img>
+              >
+                <v-carousel-item
+                  v-for="photo in project.photos"
+                  :key="photo.id"
+                  :src="photo.link"
+                  cover
+                ></v-carousel-item>
+              </v-carousel>
               <v-card-title>{{ project.title }}</v-card-title>
               <v-card-text>
                 <p class="text-body-1">{{ project.description }}</p>

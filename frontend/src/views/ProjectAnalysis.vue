@@ -95,6 +95,7 @@ const router = useRouter()
 const analysis = ref(null)
 const isLoading = ref(true)
 const error = ref(null)
+const project = ref(null)
 
 const token = ref('')
 onMounted(() => {
@@ -107,23 +108,57 @@ onMounted(() => {
 })
 
 const loadData = async () => {
+  const projectId = route.params.id
+  isLoading.value = true
+  error.value = null
+  
   try {
-    const projectId = route.params.id
     // Сначала получаем информацию о проекте
     const projectResponse = await axios.get(`/api/projects/${projectId}`, {
       headers: { Authorization: `Bearer ${token.value}` }
     })
     
+    project.value = projectResponse.data
+
+    if (!project.value?.repository) {
+      error.value = 'Для анализа необходим репозиторий GitHub'
+      return
+    }
+    
     // Извлекаем owner и repo из URL репозитория
-    const repoUrl = projectResponse.data.repository
-    const [owner, repo] = repoUrl.split('github.com/')[1].split('/')
+    const repoUrl = project.value.repository
+    const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/)
     
-    // Получаем анализ репозитория
-    const analysisResponse = await axios.get(`/api/repo/${owner}/${repo}`, {
-      headers: { Authorization: `Bearer ${token.value}` }
-    })
+    if (!match) {
+      error.value = 'Некорректная ссылка на GitHub репозиторий'
+      return
+    }
     
-    analysis.value = analysisResponse.data
+    const [_, owner, repo] = match
+    
+    try {
+      // Получаем анализ репозитория
+      const analysisResponse = await axios.get(`/api/repo/${owner}/${repo}`, {
+        headers: { Authorization: `Bearer ${token.value}` }
+      })
+      
+      if (analysisResponse.data.error) {
+        router.push({
+          path: `/projects/${projectId}`,
+          query: { error: 'Некорректная ссылка на GitHub репозиторий' }
+        })
+        return
+      }
+      
+      analysis.value = analysisResponse.data
+    } catch (analysisError) {
+      console.error('Ошибка анализа:', analysisError)
+      router.push({
+        path: `/projects/${projectId}`,
+        query: { error: 'Некорректная ссылка на GitHub репозиторий' }
+      })
+      return
+    }
   } catch (err) {
     error.value = err.response?.data?.message || err.message
     console.error('Ошибка:', err)

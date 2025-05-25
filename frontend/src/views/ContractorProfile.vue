@@ -44,8 +44,19 @@
                 </v-card-subtitle>
                 <v-card-text>{{ project.text }}</v-card-text>
                 <v-row v-if="project.photos && project.photos.length" class="mt-2">
-                  <v-col v-for="photo in project.photos" :key="photo.id" cols="6">
-                    <v-img :src="photo.link" aspect-ratio="1" class="rounded-lg" cover />
+                  <v-col cols="12">
+                    <v-carousel
+                      hide-delimiter-background
+                      show-arrows="hover"
+                      height="200"
+                    >
+                      <v-carousel-item
+                        v-for="photo in project.photos"
+                        :key="photo.id"
+                        :src="photo.link"
+                        cover
+                      ></v-carousel-item>
+                    </v-carousel>
                   </v-col>
                 </v-row>
               </v-card>

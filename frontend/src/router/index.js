@@ -18,6 +18,7 @@ import CompletedOrders from '@/views/customer/CompletedOrders.vue'
 import ProjectDetails from '../views/ProjectDetails.vue'
 import ProjectAnalysis from '../views/ProjectAnalysis.vue'
 import OrderFeedback from '../views/OrderFeedback.vue'
+import EditProject from '@/views/EditProject.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -100,6 +101,12 @@ const router = createRouter({
       path: '/order/:id/feedback',
       name: 'OrderFeedback',
       component: OrderFeedback,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/projects/:id/edit',
+      name: 'EditProject',
+      component: EditProject,
       meta: { requiresAuth: true }
     },
     // Admin routes

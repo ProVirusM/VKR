@@ -22,10 +22,10 @@
             v-model="project.github_link"
             label="Ссылка на GitHub репозиторий"
             :rules="[
-              v => !!v || 'Ссылка обязательна',
-              v => /^https:\/\/github\.com\/.+/.test(v) || 'Некорректная ссылка на GitHub'
+              v => !v || /^https:\/\/github\.com\/.+/.test(v) || 'Некорректная ссылка на GitHub'
             ]"
-            required
+            hint="Необязательное поле"
+            persistent-hint
           ></v-text-field>
 
           <v-file-input
@@ -33,8 +33,13 @@
             label="Фотографии проекта"
             multiple
             accept="image/*"
-            :rules="[v => v.length <= 5 || 'Максимум 5 фотографий']"
+            :rules="[
+              v => v.length <= 10 || 'Максимум 10 фотографий',
+              v => !v.some(file => file.size > 10 * 1024 * 1024) || 'Каждое изображение не должно превышать 10 МБ'
+            ]"
             prepend-icon="mdi-camera"
+            hint="Максимум 10 фотографий, каждая до 10 МБ"
+            persistent-hint
           ></v-file-input>
 
           <v-alert

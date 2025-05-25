@@ -93,10 +93,10 @@
           </template>
           <v-btn
             v-else-if="user.roles.includes('contractor')"
-            color="success"
-            @click="respondToOrder"
+            :color="hasResponded ? 'error' : 'success'"
+            @click="hasResponded ? cancelResponse() : respondToOrder()"
           >
-            Откликнуться
+            {{ hasResponded ? 'Отменить отклик' : 'Откликнуться' }}
           </v-btn>
         </template>
         <v-btn
@@ -180,6 +180,7 @@ const isLoading = ref(true)
 const error = ref(null)
 const approvedContractor = ref(null)
 const deleteDialog = ref(false)
+const hasResponded = ref(false)
 
 // Состояние для Snackbar
 const snackbar = ref({
@@ -224,6 +225,18 @@ const loadData = async () => {
     stacks.value = orderRes.data?.stacks || []
     user.value = userRes.data || null
 
+    // Если пользователь - исполнитель, проверяем его отклик
+    if (user.value && Array.isArray(user.value.roles) && user.value.roles.includes('contractor')) {
+      try {
+        const responseCheck = await axios.get(`/api/orders/${id}/check-response`, {
+          headers: { Authorization: `Bearer ${token.value}` }
+        })
+        hasResponded.value = responseCheck.data.hasResponded
+      } catch (err) {
+        console.error('Ошибка при проверке отклика:', err)
+      }
+    }
+
     // Если заказ завершен, загружаем информацию об утвержденном исполнителе
     if (order.value?.ord_status === 'Завершен') {
       try {
@@ -264,13 +277,41 @@ const respondToOrder = async () => {
       }
     )
 
-    if (response.status === 200) {
-      alert('Отклик успешно отправлен!')
-      router.push(`/customer/orders/${route.params.id}/responders`)
+    if (response.status === 201) {
+      showNotification('Отклик успешно отправлен!', 'success')
+      hasResponded.value = true
     }
   } catch (err) {
     console.error('Ошибка при отклике:', err)
-    alert(err.response?.data?.message || 'Ошибка при отправке отклика')
+    showNotification(err.response?.data?.message || 'Ошибка при отправке отклика', 'error')
+  }
+}
+
+const cancelResponse = async () => {
+  try {
+    if (!token.value) {
+      router.push('/login')
+      return
+    }
+
+    const response = await axios.post(
+      `/api/orders/${route.params.id}/cancel-response`,
+      {},
+      {
+        headers: {
+          'Authorization': `Bearer ${token.value}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+
+    if (response.status === 200) {
+      showNotification('Отклик успешно отменен!', 'success')
+      hasResponded.value = false
+    }
+  } catch (err) {
+    console.error('Ошибка при отмене отклика:', err)
+    showNotification(err.response?.data?.message || 'Ошибка при отмене отклика', 'error')
   }
 }
 

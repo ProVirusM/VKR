@@ -12,6 +12,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route('/api/project-photos')]
 class PhotosProjectsGitHubController extends AbstractController
@@ -215,12 +216,23 @@ class PhotosProjectsGitHubController extends AbstractController
      * Удалить фотографию проекта (DELETE /api/project-photos/{ppgh_id})
      */
     #[Route('/{ppgh_id}', name: 'photos_projects_github_delete', methods: ['DELETE'])]
-    #[ParamConverter('photo', options: ['mapping' => ['ppgh_id' => 'id']])]
-    public function delete(PhotosProjectsGitHub $photo, EntityManagerInterface $entityManager): JsonResponse
+    public function delete(int $ppgh_id, EntityManagerInterface $entityManager): JsonResponse
     {
+        $photo = $entityManager->getRepository(PhotosProjectsGitHub::class)->find($ppgh_id);
+        
+        if (!$photo) {
+            return new JsonResponse(['message' => 'Фотография не найдена'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Удаляем файл с диска
+        $filePath = $this->uploadDir . basename($photo->getPpghLink());
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+
         $entityManager->remove($photo);
         $entityManager->flush();
 
-        return $this->json(['message' => 'Project photo deleted successfully'], JsonResponse::HTTP_NO_CONTENT);
+        return new JsonResponse(['message' => 'Фотография успешно удалена'], Response::HTTP_NO_CONTENT);
     }
 }

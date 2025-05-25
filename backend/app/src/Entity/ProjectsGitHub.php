@@ -21,7 +21,7 @@ class ProjectsGitHub
     #[ORM\Column(length: 255)]
     private ?string $pgh_name = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $pgh_repository = null;
 
     #[ORM\ManyToOne(inversedBy: 'projectsGitHubs')]
