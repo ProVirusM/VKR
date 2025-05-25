@@ -49,6 +49,7 @@
                       hide-delimiter-background
                       show-arrows="hover"
                       height="200"
+                      @click.stop
                     >
                       <v-carousel-item
                         v-for="photo in project.photos"
