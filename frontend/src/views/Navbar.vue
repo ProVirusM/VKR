@@ -1,6 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { computed } from 'vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -13,6 +14,15 @@ const handleLogout = () => {
 const goToLogin = () => {
   router.push('/login')
 }
+
+const goToDashboard = () => {
+  router.push('/dashboard')
+}
+
+const isContractor = computed(() => {
+  return auth.isAuthenticated && auth.user && Array.isArray(auth.user.roles) && auth.user.roles.includes('contractor')
+})
+
 </script>
 
 <template>
@@ -22,15 +32,15 @@ const goToLogin = () => {
       <span class="brand-name">IT-заказы</span>
     </div>
     <nav class="navbar-links">
-      <RouterLink to="/" exact>Home</RouterLink>
-      <RouterLink to="/about">About</RouterLink>
-      <RouterLink to="/customer/orders">Заказы</RouterLink>
 
-      <template v-if="!auth.isAuthenticated">
-        <v-btn color="primary" class="navbar-btn" @click="goToLogin">Войти</v-btn>
+<!--      <RouterLink v-if="Array.isArray(user.roles) && user.roles.includes('contractor')" to="/customer/orders">Заказы</RouterLink>-->
+
+      <template v-if="auth.isAuthenticated">
+        <v-btn color="primary" class="navbar-btn" @click="goToDashboard">Профиль</v-btn>
+        <v-btn color="error" class="navbar-btn" @click="handleLogout">Выйти</v-btn>
       </template>
       <template v-else>
-        <v-btn color="error" class="navbar-btn" @click="handleLogout">Выйти</v-btn>
+        <v-btn color="primary" class="navbar-btn" @click="goToLogin">Войти</v-btn>
       </template>
     </nav>
   </header>

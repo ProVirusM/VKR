@@ -111,6 +111,11 @@
                 Создать проект
               </v-btn>
             </v-col>
+            <v-col cols="12" md="4">
+              <v-btn block color="blue-grey" @click="goToMyOrders" prepend-icon="mdi-briefcase">
+                Заказы
+              </v-btn>
+            </v-col>
           </template>
 
           <!-- Администратор -->
