@@ -49,20 +49,28 @@
 
         <v-divider class="my-4" />
 
-        <div class="mb-3">
-          <strong>Статус участия:</strong>
-          <v-chip
-            :color="getStatusColor(order.order_contractor_status)"
-            class="ml-2"
-            size="small"
-          >
-            {{ order.order_contractor_status }}
-          </v-chip>
-        </div>
+<!--        <div class="mb-3">-->
+<!--          <strong>Статус участия:</strong>-->
+<!--          <v-chip-->
+<!--            :color="getStatusColor(order.order_contractor_status)"-->
+<!--            class="ml-2"-->
+<!--            size="small"-->
+<!--          >-->
+<!--            {{ order.order_contractor_status }}-->
+<!--          </v-chip>-->
+<!--        </div>-->
       </v-card-text>
 
       <v-card-actions class="d-flex justify-space-between">
         <v-btn color="grey" variant="outlined" @click="$router.back()">Назад</v-btn>
+        <v-btn
+          v-if="order.ord_status === 'Завершен'"
+          :color="existingChat ? 'primary' : 'success'"
+          :prepend-icon="existingChat ? 'mdi-chat' : 'mdi-chat-plus'"
+          @click="handleChat"
+        >
+          {{ existingChat ? 'Открыть чат' : 'Начать чат' }}
+        </v-btn>
       </v-card-actions>
     </v-card>
 
@@ -85,6 +93,7 @@ const order = ref(null)
 const stacks = ref([])
 const isLoading = ref(true)
 const error = ref(null)
+const existingChat = ref(null)
 
 // Получаем токен безопасным способом
 const token = ref('')
@@ -106,6 +115,23 @@ const loadData = async () => {
 
     order.value = response.data?.order || null
     stacks.value = response.data?.stacks || []
+
+    // Проверяем существование чата для завершенного заказа
+    if (order.value?.ord_status === 'Завершен') {
+      try {
+        console.log('Checking chat for order:', order.value.id)
+        const chatRes = await axios.get(`/api/chats/check-order/${order.value.id}`, {
+          headers: { Authorization: `Bearer ${token.value}` }
+        })
+        console.log('Chat check response:', chatRes.data)
+        if (chatRes.data.exists && chatRes.data.chatId) {
+          existingChat.value = chatRes.data.chatId
+        }
+      } catch (error) {
+        console.error('Error checking chat:', error)
+        console.error('Error details:', error.response?.data)
+      }
+    }
   } catch (err) {
     error.value = err.response?.data?.message || err.message
     console.error('Ошибка:', err)
@@ -114,6 +140,32 @@ const loadData = async () => {
     }
   } finally {
     isLoading.value = false
+  }
+}
+
+const handleChat = async () => {
+  try {
+    if (!token.value) {
+      router.push('/login')
+      return
+    }
+
+    if (existingChat.value) {
+      router.push(`/chat/${existingChat.value}`)
+    } else {
+      const res = await axios.post('/api/chats/create-order',
+        { orderId: order.value.id },
+        {
+          headers: { Authorization: `Bearer ${token.value}` }
+        }
+      )
+      if (res.data.id) {
+        existingChat.value = res.data.id
+        router.push(`/chat/${res.data.id}`)
+      }
+    }
+  } catch (error) {
+    console.error('Error handling chat:', error)
   }
 }
 
@@ -135,4 +187,4 @@ const getStatusColor = (status) => {
 .gap-2 {
   gap: 8px;
 }
-</style> 
+</style>

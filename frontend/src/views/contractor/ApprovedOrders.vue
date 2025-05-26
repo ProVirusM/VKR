@@ -80,16 +80,23 @@
            </v-row>
 
           <v-card-actions class="justify-end">
-             <!-- Возможно, добавить кнопку для просмотра деталей заказа -->
-            <!-- <v-btn
+            <v-btn
               color="primary"
               variant="elevated"
               rounded
               @click="viewDetails(order.id)"
             >
               Подробнее
-            </v-btn> -->
-             <v-btn variant="text" @click="goBack">Назад</v-btn>
+            </v-btn>
+            <v-btn
+              v-if="order.status === 'Завершен'"
+              :color="existingChats[order.id] ? 'primary' : 'success'"
+              :prepend-icon="existingChats[order.id] ? 'mdi-chat' : 'mdi-chat-plus'"
+              @click="handleChat(order.id)"
+            >
+              {{ existingChats[order.id] ? 'Открыть чат' : 'Начать чат' }}
+            </v-btn>
+            <v-btn variant="text" @click="goBack">Назад</v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
@@ -110,12 +117,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { useRouter } from 'vue-router' // useRoute больше не нужен
+import { useRouter } from 'vue-router'
 
 const approvedOrders = ref([])
 const loading = ref(true)
 const router = useRouter()
-// const route = useRoute() // Удаляем useRoute
+const existingChats = ref({})
 
 const fetchApprovedOrders = async () => {
   try {
@@ -125,18 +132,62 @@ const fetchApprovedOrders = async () => {
       return
     }
 
-    // Загружаем утвержденные заказы текущего подрядчика
     const response = await axios.get('/api/contractor/approved-orders', {
       headers: { Authorization: `Bearer ${token}` }
     })
 
     approvedOrders.value = response.data
 
+    // Check for existing chats for each order
+    for (const order of approvedOrders.value) {
+      if (order.status === 'Завершен') {
+        try {
+          const chatRes = await axios.get(`/api/chats/check-order/${order.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (chatRes.data.exists && chatRes.data.chatId) {
+            existingChats.value[order.id] = chatRes.data.chatId
+          }
+        } catch (error) {
+          console.error('Error checking chat:', error)
+        }
+      }
+    }
   } catch (error) {
     console.error('Ошибка при загрузке утвержденных заказов:', error)
-    // Можно добавить отображение ошибки пользователю
   } finally {
     loading.value = false
+  }
+}
+
+const viewDetails = (id) => {
+  router.push(`/contractor/orders/${id}`)
+}
+
+const handleChat = async (orderId) => {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    if (existingChats.value[orderId]) {
+      router.push(`/chat/${existingChats.value[orderId]}`)
+    } else {
+      const res = await axios.post('/api/chats/create-order', 
+        { orderId },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      )
+      if (res.data.id) {
+        existingChats.value[orderId] = res.data.id
+        router.push(`/chat/${res.data.id}`)
+      }
+    }
+  } catch (error) {
+    console.error('Error handling chat:', error)
   }
 }
 

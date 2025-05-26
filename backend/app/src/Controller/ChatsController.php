@@ -7,6 +7,8 @@ use App\Entity\Messages;
 use App\Entity\Contractors;
 use App\Entity\Customers;
 use App\Entity\User;
+use App\Entity\Orders;
+use App\Entity\OrderContractors;
 use App\Repository\ChatsRepository;
 use App\Repository\ContractorsRepository;
 use App\Repository\CustomersRepository;
@@ -313,6 +315,138 @@ class ChatsController extends AbstractController
         } catch (\Exception $e) {
             return $this->json([
                 'error' => 'Произошла ошибка при получении списка чатов',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/check-order/{orderId}', name: 'check_order_chat', methods: ['GET'])]
+    public function checkOrderChat(int $orderId, UserInterface $user): JsonResponse
+    {
+        try {
+            error_log("Starting checkOrderChat for orderId: " . $orderId);
+            
+            $contractor = $user->getContractors();
+            error_log("Contractor: " . ($contractor ? $contractor->getId() : 'null'));
+            
+//            if (!$contractor) {
+//                return $this->json(['error' => 'Только подрядчики могут проверять чаты заказов'], 403);
+//            }
+
+            $order = $this->entityManager->getRepository(Orders::class)->find($orderId);
+            error_log("Order: " . ($order ? $order->getId() : 'null'));
+            
+            if (!$order) {
+                return $this->json(['error' => 'Заказ не найден'], 404);
+            }
+
+            // Проверяем, что заказ принадлежит этому подрядчику
+//            $orderContractor = $this->entityManager->getRepository(OrderContractors::class)
+//                ->findOneBy(['ord_id' => $order, 'cnt_id' => $contractor]);
+//            error_log("OrderContractor: " . ($orderContractor ? 'found' : 'not found'));
+//
+//            if (!$orderContractor) {
+//                return $this->json(['error' => 'Доступ запрещен'], 403);
+//            }
+
+            // Получаем заказчика из заказа
+            $customer = $order->getCstId();
+            error_log("Customer: " . ($customer ? $customer->getId() : 'null'));
+            
+            if (!$customer) {
+                return $this->json(['error' => 'Заказчик не найден'], 404);
+            }
+
+            // Проверяем существование чата между подрядчиком и заказчиком
+            $chat = $this->entityManager->getRepository(Chats::class)->findOneBy([
+                'cst_id' => $customer,
+                'cnt_id' => $contractor
+            ]);
+            error_log("Chat: " . ($chat ? $chat->getId() : 'not found'));
+
+            return $this->json([
+                'exists' => $chat !== null,
+                'chatId' => $chat ? $chat->getId() : null
+            ]);
+        } catch (\Exception $e) {
+            // Добавляем подробное логирование ошибки
+            $errorDetails = [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ];
+            
+            // Логируем ошибку
+            error_log('Error in checkOrderChat: ' . json_encode($errorDetails));
+            
+            return $this->json([
+                'error' => 'Произошла ошибка при проверке чата',
+                'details' => $errorDetails
+            ], 500);
+        }
+    }
+
+    #[Route('/create-order', name: 'create_order_chat', methods: ['POST'])]
+    public function createOrderChat(Request $request, UserInterface $user): JsonResponse
+    {
+        try {
+            $contractor = $user->getContractors();
+//            if (!$contractor) {
+//                return $this->json(['error' => 'Только подрядчики могут создавать чаты заказов'], 403);
+//            }
+
+            $data = json_decode($request->getContent(), true);
+            $orderId = $data['orderId'] ?? null;
+
+//            if (!$orderId) {
+//                return $this->json(['error' => 'ID заказа обязателен'], 400);
+//            }
+
+            $order = $this->entityManager->getRepository(Orders::class)->find($orderId);
+            if (!$order) {
+                return $this->json(['error' => 'Заказ не найден'], 404);
+            }
+
+            // Проверяем, что заказ принадлежит этому подрядчику
+//            $orderContractor = $this->entityManager->getRepository(OrderContractors::class)
+//                ->findOneBy(['ord_id' => $order, 'cnt_id' => $contractor]);
+//
+//            if (!$orderContractor) {
+//                return $this->json(['error' => 'Доступ запрещен'], 403);
+//            }
+
+            // Получаем заказчика из заказа
+            $customer = $order->getCstId();
+
+            // Проверяем существование чата между подрядчиком и заказчиком
+            $existingChat = $this->entityManager->getRepository(Chats::class)->findOneBy([
+                'cst_id' => $customer,
+                'cnt_id' => $contractor
+            ]);
+
+            if ($existingChat) {
+                return $this->json([
+                    'id' => $existingChat->getId(),
+                    'message' => 'Чат уже существует'
+                ]);
+            }
+
+            // Создаем новый чат
+            $chat = new Chats();
+            $chat->setCntId($contractor);
+            $chat->setCstId($customer);
+
+            $this->entityManager->persist($chat);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'id' => $chat->getId(),
+                'message' => 'Чат успешно создан'
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'Произошла ошибка при создании чата',
                 'message' => $e->getMessage()
             ], 500);
         }
