@@ -127,7 +127,7 @@ const submitFeedback = async () => {
       text: feedback.value.text,
       estimation: feedback.value.estimation,
       contractor_id: approvedContractor.contractorId,
-      customer_id: user.id
+      customer_id: user.customerId
     }, {
       headers: { Authorization: `Bearer ${token}` }
     })

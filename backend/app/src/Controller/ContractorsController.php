@@ -203,7 +203,7 @@ class ContractorsController extends AbstractController
         $orders = [];
         foreach ($contractor->getOrdersContractors() as $orderContractor) {
             $order = $orderContractor->getOrdId();
-            if ($order) {
+            if ($order && $order->getOrdStatus()=='Завершен') {
                 $orders[] = [
                     'id' => $order->getId(),
                     'title' => $order->getOrdTitle(),

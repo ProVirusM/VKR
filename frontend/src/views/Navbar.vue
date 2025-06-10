@@ -6,8 +6,8 @@ import axios from 'axios'
 
 const router = useRouter()
 const auth = useAuthStore()
-const user = ref({})
-
+// const user = ref({})
+const user = computed(() => auth.user)
 const handleLogout = () => {
   auth.logout()
   router.push('/login')

@@ -65,7 +65,8 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
 const usrName = ref('')
 const usrSurname = ref('')
 const usrPatronymic = ref('')
@@ -114,6 +115,7 @@ const register = async () => {
 
     // Перенаправляем в дашборд
     console.log('Перенаправление на /dashboard')
+    await auth.login(token)
     await router.push('/dashboard')
   } catch (err) {
     console.error('Ошибка:', err)

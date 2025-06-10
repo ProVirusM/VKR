@@ -49,7 +49,8 @@ const login = async () => {
     localStorage.setItem('name', response.data.name)
     localStorage.setItem('email', response.data.email)
 
-    auth.login(token) // <-- передаем токен в store
+    // auth.login(token) // <-- передаем токен в store
+    await auth.login(token)
     router.push('/dashboard') // перенаправляем
   } catch (err) {
     alert('Ошибка входа. Проверьте данные.')

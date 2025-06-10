@@ -73,10 +73,10 @@ class AppFixtures extends Fixture
 
         // Создаем пользователей
         $users = [
-            ['Иван', 'Иванов', 'Иванович', 'ivan@example.com', 'password123', true],
-            ['Петр', 'Петров', 'Петрович', 'petr@example.com', 'password123', true],
-            ['Алексей', 'Сидоров', 'Алексеевич', 'alex@example.com', 'password123', false],
-            ['Мария', 'Смирнова', 'Олеговна', 'maria@example.com', 'password123', false],
+            ['Иван', 'Иванов', 'Иванович', 'ivan@example.com', 'password123', true, ["admin"]],
+            ['Петр', 'Петров', 'Петрович', 'petr@example.com', 'password123', true, ["contractor"]],
+            ['Алексей', 'Сидоров', 'Алексеевич', 'alex@example.com', 'password123', false, ["customer"]],
+            ['Мария', 'Смирнова', 'Олеговна', 'maria@example.com', 'password123', false, ["customer"]],
         ];
 
         $userEntities = [];
@@ -91,6 +91,7 @@ class AppFixtures extends Fixture
             $user->setUsrPatronymic($userData[2]);
             $user->setEmail($userData[3]);
             $user->setPassword($this->passwordHasher->hashPassword($user, $userData[4]));
+            $user->setRoles($userData[6]);
             $manager->persist($user);
             $userEntities[] = $user;
 
